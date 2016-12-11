@@ -1,3 +1,4 @@
+#coding: utf8
 import numpy as np
 
 def calc_hit_cand_selection(AI, AJ, y, support, signum):

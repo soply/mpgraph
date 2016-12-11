@@ -8,34 +8,6 @@ from scipy import optimize
 from lasso_path_utils import (calc_hit_cand_selection, calc_hit_cand)
 from mp_utils import (calc_B_y_beta, calc_B_y_beta_selection)
 
-#
-# def merge_beta_regions(beta_regions, active_region_idx = None):
-#     ctr = 1
-#     len_regions = len(beta_regions)
-#     while ctr < len_regions:
-#         # Check if support and signum coincide
-#         if np.array_equal(beta_regions[ctr][2],beta_regions[ctr-1][2]) and \
-#                 np.array_equal(beta_regions[ctr][3],beta_regions[ctr-1][3]):
-#             beta_regions[ctr-1][0] = beta_regions[ctr][0] # Note that for higher ctr the value beta_min is smaller
-#             beta_regions[ctr-1][1] = beta_regions[ctr-1][1]
-#             del beta_regions[ctr]
-#             len_regions = len_regions - 1
-#             if active_region_idx is not None and ctr <= active_region_idx:
-#                 active_region_idx -= 1
-#         else:
-#             ctr += 1
-#     return beta_regions, active_region_idx
-#
-#
-# def get_sibling_regions(support, signum, beta_min, beta_max, minimiser,
-#                         svdAAt_U, svdAAt_S, A, y):
-#     additional_indices, boundary_parameters, used_signs = beta_tiling_mp_dac(
-#         support, signum, beta_min, beta_max, minimiser, svdAAt_U, svdAAt_S, A,
-#         y)
-#     # new_region = refine_beta_regions(
-#     #      additional_indices, boundary_parameters, used_signs, beta_region[2],
-#     #      beta_region[3])
-#     return new_region
 def create_children_LARS(support, signum, beta_min, beta_max,
                          minimiser, svdAAt_U, svdAAt_S, A, y,
                          additional_indices=None,

@@ -1,3 +1,4 @@
+#coding: utf8
 import numpy as np
 
 def calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta):

@@ -1,3 +1,4 @@
+#coding: utf8
 import numpy as np
 
 from create_children_LARS import create_children_LARS, post_process_children
@@ -6,29 +7,28 @@ from create_children_LARS import create_children_LARS, post_process_children
 class TilingElement(object):
 
     def __init__(self, beta_min, beta_max, support, sign_pattern, parents,
-                 A, y, svdAAt_U, svdAAt_S, children=None, options=None):
+                 A, y, svdAAt_U, svdAAt_S, options=None):
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.support = support
         self.sign_pattern = sign_pattern
         self.parents = parents
-        if children is not None:
-            self.children = children
-        else:
-            self.children = []
-        self.mode = mode
+        self.children = []
         # References to global data matrices and data
         self.A = A
         self.y = y
         self.svdAAt_U = svdAAt_U
         self.svdAAt_S = svdAAt_S
+        self.options = options
 
-    def __str__(self):
-        return """Tiling element (Support: {0}, Sign pattern: {1},
-                Beta range: {2})""".format(self.support, self.sign_pattern,
+    def __repr__(self):
+        return ("Tiling element (Support: {0}, Sign pattern: {1}" + \
+                " Beta range: {2})").format(self.support, self.sign_pattern,
                                         [self.beta_min, self.beta_max])
 
-    def create_children(self, beta_min=None, beta_max=None):
+
+
+    def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
         if beta_max is None:
@@ -44,28 +44,42 @@ class TilingElement(object):
                                              boundary_parameters,
                                              used_signs, self.support,
                                              self.old_sign)
+        elif self.options["mode"] == "TEST":
+            children = self.options["test_iterator"].next()
         else:
             raise NotImplementedError("Mode not implemented.")
-        for child in reversed(children):
-            self.children.append(TilingElement(
-                child[0][1], child[1][1], child[2], child[3], [self],
-                self.A, self.y, self.svdAAt_U, self.svdAAt_S, self.options)
+        children.sort(key = lambda x: x[0][1])
+        new_tes = []
+        for child in children:
+            new_tes.append(self.add_child(child[0][1], child[1][1], child[2],
+                                            child[3]))
+
         # Enforce that children are ordered correctly
-        self.children.sort(key=lambda x: x.beta_min)
-        new_childless_tilingelements=self.children
-        new_childless_tilingelements_left=self.oldest_child.merge_left()
-        new_childless_tilingelements_right=self.youngest_child.merge_right()
-        return new_childless_tilingelements + \
-                new_childless_tilingelements_left + \
-                new_childless_tilingelements_right
+        self.sort_childs()
+        new_childless_te=new_tes
+        merged_left, new_childless_te_left=self.oldest_child().merge_left()
+        merged_right, new_childless_te_right=self.youngest_child().merge_right()
+        return new_childless_te + \
+                new_childless_te_left + \
+                new_childless_te_right
 
 
     def compare(self, tilingelement):
         return np.array_equal(tilingelement.support, self.support) and \
             np.array_equal(tilingelement.sign_pattern, self.sign_pattern)
 
+    def add_child(self, beta_min, beta_max, support, signum):
+        te = TilingElement(beta_min, beta_max, support, signum,
+                            [self], self.A, self.y, self.svdAAt_U,
+                            self.svdAAt_S, self.options)
+        self.children.append(te)
+        return te
+
+    def sort_childs(self):
+        self.children.sort(key=lambda x: x.beta_min)
+
     def replace_child(self, child_to_replace, replacement):
-        ctr=0:
+        ctr=0
         while ctr < len(self.children):
             if self.children[ctr] != child_to_replace:
                 ctr += 1
@@ -73,59 +87,60 @@ class TilingElement(object):
                 self.children[ctr]=replacement
                 return 1
         else:
-            print """Could not find child {0} in the children of child {1} and
-                thus could not replace it with child {2}""".format(self,
+            print ("Could not find child {0} in the children of child {1} and" + \
+                " thus could not replace it with child {2}").format(self,
                 child_to_replace, replacement)
 
     def oldest_child(self):
         if len(self.children) > 0:
             return self.children[0]
         else:
-            print """Tiling element: {0}\nNo children but asking for the
-                oldest child. """.format(self)
+            print ("Tiling element: {0}\nNo children but asking for the" + \
+                " oldest child. ").format(self)
             return None
 
     def youngest_child(self):
         if len(self.children) > 0:
             return self.children[-1]
         else:
-            print """Tiling element: {0}\nNo children but asking for the
-                youngest child. """.format(self)
+            print ("Tiling element: {0}\nNo children but asking for the" + \
+                " youngest child. ").format(self)
             return None
 
     def oldest_parent(self):
-        if len(self.parents) > 0:
+        if self.parents is not None and len(self.parents) > 0:
             return self.parents[0]
         else:
-            print """Tiling element: {0}\nNo parent but asking for the oldest
-                parent. """.format(self)
+            print ("Tiling element: {0}\nNo parent but asking for the oldest" + \
+                " parent. ").format(self)
             return None
 
     def youngest_parent(self):
-        if len(self.parents) > 0:
+        if self.parents is not None and len(self.parents) > 0:
             return self.parents[-1]
         else:
-            print """Tiling element: {0}\nNo parent but asking for the oldest
-                parent. """.format(self)
+            print ("Tiling element: {0}\nNo parent but asking for the oldest" + \
+                " parent. ").format(self)
             return None
 
 
     def find_next_older_neighbor(self, child):
-        ctr=1:
+        ctr=1
         n_children=len(self.children)
         while ctr < n_children:
             if self.children[ctr] == child:
                 return self.children[ctr - 1]
+            ctr = ctr + 1
         else:
             print """Could not find next older neighbor of node {0} in children
                 of node {1}.""".format(child, self)
             return None
 
     def find_next_younger_neighbor(self, child):
-        ctr=0:
+        ctr=0
         n_children=len(self.children)
         while ctr + 1 < n_children:
-            if self.children[ctr + 1] == child:
+            if self.children[ctr] == child:
                 return self.children[ctr + 1]
             ctr = ctr + 1
         else:
@@ -136,9 +151,10 @@ class TilingElement(object):
     def merge_right(self):
         current_node=self
         while current_node.youngest_parent() is not None and \
-                current_node.youngest_parent.oldest_child() == current_node:
+                current_node.youngest_parent().youngest_child() == current_node:
             current_node=current_node.youngest_parent()
         if current_node.youngest_parent() is None:
+            print "Stopping merge_right operation on {0}".format(self)
             # In case we reached the root without having found a candidate for
             # merging the node
             return 0, []
@@ -146,6 +162,8 @@ class TilingElement(object):
         parent=current_node.youngest_parent()
         # Get next older sibling
         current_node=parent.find_next_younger_neighbor(current_node)
+        import pdb
+        pdb.set_trace()
         # Find matching support and sign pattern
         while not current_node.compare(self) and \
                     len(current_node.children) > 0:
@@ -159,21 +177,23 @@ class TilingElement(object):
             for parent in self.parents:
                 parent.replace_child(self, current_node)
             if len(current_node.children) > 0:
-                new_childless_tilingelements=current_node.create_children(
+                new_childless_tilingelements=current_node.find_children(
                                                 beta_min=self.beta_min,
                                                 beta_max=self.beta_max)
                 return 1, new_childless_tilingelements
             else:
                 return 1, []
         else:
+            print "Stopping merge_right operation on {0}".format(self)
             return 0, []
 
     def merge_left(self):
         current_node=self
         while current_node.oldest_parent() is not None and \
-                current_node.oldest_parent.youngest_child() == current_node:
+                current_node.oldest_parent().oldest_child() == current_node:
             current_node=current_node.oldest_parent()
         if current_node.oldest_parent() is None:
+            print "Stopping merge_left operation on {0}".format(self)
             # In case we reached the root without having found a candidate for
             # merging the node
             return 0, []
@@ -194,11 +214,12 @@ class TilingElement(object):
             for parent in self.parents:
                 parent.replace_child(self, current_node)
             if len(current_node.children) > 0:
-                new_childless_tilingelements=current_node.create_children(
+                new_childless_tilingelements=current_node.find_children(
                                                 beta_min=self.beta_min,
                                                 beta_max=self.beta_max)
                 return 1, new_childless_tilingelements
         else:
+            print "Stopping merge_left operation on {0}".format(self)
             return 0, []
 
     def verify_tiling(self):
