@@ -22,7 +22,7 @@ class TilingElement(object):
         self.options = options
 
     def __repr__(self):
-        return ("Tiling element (Support: {0}, Sign pattern: {1}" + \
+        return ("TilingElement(Support: {0}, Sign pattern: {1}" + \
                 " Beta range: {2})").format(self.support, self.sign_pattern,
                                         [self.beta_min, self.beta_max])
 
@@ -55,10 +55,14 @@ class TilingElement(object):
                                             child[3]))
 
         # Enforce that children are ordered correctly
-        self.sort_childs()
+        self.sort_children()
         new_childless_te=new_tes
-        merged_left, new_childless_te_left=self.oldest_child().merge_left()
-        merged_right, new_childless_te_right=self.youngest_child().merge_right()
+        if new_childless_te is not None and len(new_childless_te) > 0:
+            merged_left, new_childless_te_left=new_childless_te[0].merge_left()
+            merged_right, new_childless_te_right=new_childless_te[-1].merge_right()
+        # If a merge happened, we do not consider them as new childs. Thus, we
+        # have to remove them from the list.
+        new_childless_te = [te for te in new_childless_te if te in self.children]
         return new_childless_te + \
                 new_childless_te_left + \
                 new_childless_te_right
@@ -75,7 +79,7 @@ class TilingElement(object):
         self.children.append(te)
         return te
 
-    def sort_childs(self):
+    def sort_children(self):
         self.children.sort(key=lambda x: x.beta_min)
 
     def replace_child(self, child_to_replace, replacement):
@@ -119,8 +123,8 @@ class TilingElement(object):
         if self.parents is not None and len(self.parents) > 0:
             return self.parents[-1]
         else:
-            print ("Tiling element: {0}\nNo parent but asking for the oldest" + \
-                " parent. ").format(self)
+            print ("Tiling element: {0}\nNo parent but asking for the" + \
+                " oldest parent. ").format(self)
             return None
 
 
@@ -132,8 +136,8 @@ class TilingElement(object):
                 return self.children[ctr - 1]
             ctr = ctr + 1
         else:
-            print """Could not find next older neighbor of node {0} in children
-                of node {1}.""".format(child, self)
+            print ("Could not find next older neighbor of node {0} in " + \
+                " children of node {1}.").format(child, self)
             return None
 
     def find_next_younger_neighbor(self, child):
@@ -144,48 +148,9 @@ class TilingElement(object):
                 return self.children[ctr + 1]
             ctr = ctr + 1
         else:
-            print """Could not find next younger neighbor of node {0} in
-                children of node {1}.""".format(child, self)
+            print ("Could not find next younger neighbor of node {0} in" + \
+                " children of node {1}.").format(child, self)
             return None
-
-    def merge_right(self):
-        current_node=self
-        while current_node.youngest_parent() is not None and \
-                current_node.youngest_parent().youngest_child() == current_node:
-            current_node=current_node.youngest_parent()
-        if current_node.youngest_parent() is None:
-            print "Stopping merge_right operation on {0}".format(self)
-            # In case we reached the root without having found a candidate for
-            # merging the node
-            return 0, []
-        # Get oldest parent
-        parent=current_node.youngest_parent()
-        # Get next older sibling
-        current_node=parent.find_next_younger_neighbor(current_node)
-        import pdb
-        pdb.set_trace()
-        # Find matching support and sign pattern
-        while not current_node.compare(self) and \
-                    len(current_node.children) > 0:
-            current_node=current_node.oldest_child()
-        if current_node is not None and current_node.compare(self):
-            # Found a node to merge with
-            # Fix beta max and parents! Note that the self node should not have
-            # children yet.
-            print """Merging nodes {0} and {1}""".format(current_node, self)
-            current_node.beta_min=self.beta_min
-            for parent in self.parents:
-                parent.replace_child(self, current_node)
-            if len(current_node.children) > 0:
-                new_childless_tilingelements=current_node.find_children(
-                                                beta_min=self.beta_min,
-                                                beta_max=self.beta_max)
-                return 1, new_childless_tilingelements
-            else:
-                return 1, []
-        else:
-            print "Stopping merge_right operation on {0}".format(self)
-            return 0, []
 
     def merge_left(self):
         current_node=self
@@ -205,21 +170,70 @@ class TilingElement(object):
         while not current_node.compare(self) and \
                     len(current_node.children) > 0:
             current_node=current_node.youngest_child()
-        if current_node is not None and current_node.compare(self):
+        if current_node is not None and current_node != self and \
+                current_node.compare(self):
             # Found a node to merge with
             # Fix beta max and parents! Note that the self node should not have
             # children yet.
-            print """Merging nodes {0} and {1}""".format(current_node, self)
+            print "Merging {0} with {1}".format(current_node, self)
             current_node.beta_max=self.beta_max
             for parent in self.parents:
-                parent.replace_child(self, current_node)
+                if current_node in parent.children:
+                    parent.children.remove(self)
+                else:
+                    parent.replace_child(self, current_node)
             if len(current_node.children) > 0:
                 new_childless_tilingelements=current_node.find_children(
                                                 beta_min=self.beta_min,
                                                 beta_max=self.beta_max)
                 return 1, new_childless_tilingelements
+            else:
+                import pdb
+                pdb.set_trace()
+                return 1, []
         else:
             print "Stopping merge_left operation on {0}".format(self)
+            return 0, []
+
+    def merge_right(self):
+        current_node=self
+        while current_node.youngest_parent() is not None and \
+                current_node.youngest_parent().youngest_child() == current_node:
+            current_node=current_node.youngest_parent()
+        if current_node.youngest_parent() is None:
+            print "Stopping merge_right operation on {0}".format(self)
+            # In case we reached the root without having found a candidate for
+            # merging the node
+            return 0, []
+        # Get oldest parent
+        parent=current_node.youngest_parent()
+        # Get next older sibling
+        current_node=parent.find_next_younger_neighbor(current_node)
+        # Find matching support and sign pattern
+        while not current_node.compare(self) and \
+                    len(current_node.children) > 0:
+            current_node=current_node.oldest_child()
+        if current_node is not None and current_node != self and \
+                current_node.compare(self):
+            # Found a node to merge with
+            # Fix beta max and parents! Note that the self node should not have
+            # children yet.
+            print "Merging {0} with {1}".format(current_node, self)
+            current_node.beta_min=self.beta_min
+            for parent in self.parents:
+                if current_node in parent.children:
+                    parent.children.remove(self)
+                else:
+                    parent.replace_child(self, current_node)
+            if len(current_node.children) > 0:
+                new_childless_tilingelements=current_node.find_children(
+                                                beta_min=self.beta_min,
+                                                beta_max=self.beta_max)
+                return 1, new_childless_tilingelements
+            else:
+                return 1, []
+        else:
+            print "Stopping merge_right operation on {0}".format(self)
             return 0, []
 
     def verify_tiling(self):

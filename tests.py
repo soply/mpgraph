@@ -20,7 +20,11 @@ def test_graph_operations(testcase):
     stack.append(root_element)
     while len(stack) > 0:
         current_element = stack.pop(0)
-        new_children = current_element.find_children()
+        try:
+            new_children = current_element.find_children()
+        except StopIteration:
+            import pdb
+            pdb.set_trace()
         stack.extend(new_children)
 if __name__ == "__main__":
     testcase = "TC1"
