@@ -370,6 +370,8 @@ class TilingElement(object):
             left_candidate.uniquefy_parents()
             left_candidate.children += right_candidate.children
             left_candidate.uniquefy_children()
+            left_candidate.n_element = np.minimum(left_candidate,
+                                                  right_candidate)
             # Fix parents of right candidate by replacing the child
             for parent in right_candidate.parents:
                 parent.replace_child(right_candidate, left_candidate)
