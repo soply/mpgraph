@@ -192,7 +192,7 @@ def create_test_case_iterator(testcase):
             [[(0.0, 0.3), (0.0, 0.4), [1, 3], [1.0, -1.0]],  # <- Merge
             [(0.0, 0.4), (0.0, 0.45), [5, 6], [1.0, -1.0]]],  # <- Merge
             # Siblings from third offpsring
-            [[(0.0, 0.7), (0.0, 1.0), [10, 11], [1.0, -1.0]]], # <- Merge
+            [[(0.0, 0.6), (0.0, 1.0), [10, 11], [1.0, -1.0]]], # <- Merge
             #================ Layer 3 Start =======================#
             # Siblings of first offspring
             [[(0.0, 0.0), (0.0, 0.125), [1, 2, 15], [1.0, -1.0, 1.0]],
@@ -208,10 +208,6 @@ def create_test_case_iterator(testcase):
             # Siblings of fourth offspring
             [[(0.0, 0.5), (0.0, 0.9), [10, 11, 12], [1.0, -1.0, -1.0]],
             [(0.0, 0.9), (0.0, 1.0), [10, 11, 13], [1.0, -1.0, -1.0]]],
-            # # Substitutes for merging operations
-            # [[(0.0, 0.4), (0.0, 0.45), [1, 3, 15], [1.0, -1.0, 1.0]], # <- Merge
-            # [(0.0, 0.45), (0.0, 0.5), [10, 11, 12], [1.0, -1.0, -1.0]]], # <- Merge
-            # [[(0.0, 0.5), (0.0, 0.6), [10, 11, 12], [1.0, -1.0, -1.0]]],  # <- Merge
         ])
     else:
         raise NotImplementedError("TC {0} not implemented.".format(testcase))

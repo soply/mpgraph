@@ -10,7 +10,7 @@ from create_children_LARS import create_children_LARS, post_process_children
 class TilingElement(object):
 
     def __init__(self, beta_min, beta_max, support, sign_pattern, parents,
-                 A, y, svdAAt_U, svdAAt_S, n_element, options=None):
+                 A, y, svdAAt_U, svdAAt_S, options=None):
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.support = support
@@ -23,9 +23,6 @@ class TilingElement(object):
         self.svdAAt_U = svdAAt_U
         self.svdAAt_S = svdAAt_S
         self.options = options
-        # Identifier for tiling element that also defines unique order for the
-        # tiling elements.
-        self.n_element = n_element
 
     def __repr__(self):
         return ("TilingElement(Support: {0}, Sign pattern: {1}" + \
@@ -34,7 +31,7 @@ class TilingElement(object):
 
 
 
-    def find_children(self, n_element, beta_min=None, beta_max=None):
+    def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
         if beta_max is None:
@@ -58,43 +55,63 @@ class TilingElement(object):
         new_tes = []
         for (i, child) in enumerate(children):
             new_tes.append(self.add_child(child[0][1], child[1][1], child[2],
-                                            child[3], n_element + i))
-            print new_tes[-1].n_element
+                                            child[3]))
         return new_tes
 
     def shares_support_with(self, tilingelement):
         return np.array_equal(tilingelement.support, self.support) and \
             np.array_equal(tilingelement.sign_pattern, self.sign_pattern)
 
-    def add_child(self, beta_min, beta_max, support, signum, n_element):
-        self.children.append(TilingElement(beta_min, beta_max, support, signum,
-                            [self], self.A, self.y, self.svdAAt_U,
-                            self.svdAAt_S, n_element, self.options))
-        return self.children[-1]
+    def add_child(self, beta_min, beta_max, support, signum):
+        te = TilingElement(beta_min, beta_max, support, signum,
+                            [[self, beta_min, beta_max]], self.A, self.y,
+                            self.svdAAt_U, self.svdAAt_S,
+                            self.options)
+        self.children.append([te, beta_min, beta_max])
+        return te
 
     def sort_children(self):
-        self.children.sort(key=lambda x: x.n_element)
+        self.children.sort(key=lambda x: x[1]) # x[0] : beta_min
 
     def sort_parents(self):
-        self.children.sort(key=lambda x: x.n_element)
+        self.parents.sort(key=lambda x: x[1]) # x[0] : beta_min
 
     def uniquefy_children(self):
         # Assumes that children are in sorted order!
-        self.children = [x[0] for x in groupby(self.children)]
+        ctr = 1
+        n_children = len(self.children)
+        while ctr < len(self.children):
+            if self.children[ctr - 1][0] == self.children[ctr][0]:
+                self.children[ctr - 1][2] = self.children[ctr][2]
+                del self.children[ctr]
+                n_children -= 1
+            else:
+                ctr += 1
 
     def uniquefy_parents(self):
         # Assumes that children are in sorted order!
-        self.parents = [x[0] for x in groupby(self.parents)]
+        ctr = 1
+        n_parents = len(self.parents)
+        while ctr < len(self.parents):
+            if self.parents[ctr - 1][0] == self.parents[ctr][0]:
+                self.parents[ctr - 1][2] = self.parents[ctr][2]
+                del self.parents[ctr]
+                n_parents -= 1
+            else:
+                ctr += 1
+        # self.parents = [x[0] for x in groupby(self.parents)]
 
     def replace_child(self, child_to_replace, replacement):
         ctr=0
         while ctr < len(self.children):
-            if self.children[ctr] != child_to_replace:
+            if self.children[ctr][0] != child_to_replace:
                 ctr += 1
             else:
-                self.children[ctr]=replacement
+                self.children[ctr][0] = replacement
                 return 1
         else:
+            import pdb
+            pdb.set_trace()
             print ("Could not find child {0} in the children of child {1} and" + \
                 " thus could not replace it with child {2}").format(self,
                 child_to_replace, replacement)
@@ -102,19 +119,21 @@ class TilingElement(object):
     def replace_parent(self, parent_to_replace, replacement):
         ctr=0
         while ctr < len(self.parents):
-            if self.parents[ctr] != parent_to_replace:
+            if self.parents[ctr][0] != parent_to_replace:
                 ctr += 1
             else:
-                self.parents[ctr]=replacement
+                self.parents[ctr][0] = replacement
                 return 1
         else:
+            import pdb
+            pdb.set_trace()
             print ("Could not find child {0} in the parents of child {1} and" + \
                 " thus could not replace it with child {2}").format(self,
                 parent_to_replace, replacement)
 
     def oldest_child(self):
         if len(self.children) > 0:
-            return self.children[0]
+            return self.children[0][0]
         else:
             print ("Tiling element: {0}\nNo children but asking for the" + \
                 " oldest child. ").format(self)
@@ -122,7 +141,7 @@ class TilingElement(object):
 
     def youngest_child(self):
         if len(self.children) > 0:
-            return self.children[-1]
+            return self.children[-1][0]
         else:
             print ("Tiling element: {0}\nNo children but asking for the" + \
                 " youngest child. ").format(self)
@@ -130,7 +149,7 @@ class TilingElement(object):
 
     def oldest_parent(self):
         if self.parents is not None and len(self.parents) > 0:
-            return self.parents[0]
+            return self.parents[0][0]
         else:
             print ("Tiling element: {0}\nNo parent but asking for the oldest" + \
                 " parent. ").format(self)
@@ -138,7 +157,7 @@ class TilingElement(object):
 
     def youngest_parent(self):
         if self.parents is not None and len(self.parents) > 0:
-            return self.parents[-1]
+            return self.parents[-1][0]
         else:
             print ("Tiling element: {0}\nNo parent but asking for the" + \
                 " oldest parent. ").format(self)
@@ -148,8 +167,8 @@ class TilingElement(object):
         ctr=1
         n_children=len(self.children)
         while ctr < n_children:
-            if self.children[ctr] == child:
-                return self.children[ctr - 1]
+            if self.children[ctr][0] == child:
+                return self.children[ctr - 1][0]
             ctr = ctr + 1
         else:
             print ("Could not find next older neighbor of node {0} in " + \
@@ -160,101 +179,13 @@ class TilingElement(object):
         ctr=0
         n_children=len(self.children)
         while ctr + 1 < n_children:
-            if self.children[ctr] == child:
-                return self.children[ctr + 1]
+            if self.children[ctr][0] == child:
+                return self.children[ctr + 1][0]
             ctr = ctr + 1
         else:
             print ("Could not find next younger neighbor of node {0} in" + \
                 " children of node {1}.").format(child, self)
             return None
-
-    # def merge_left(self):
-    #     """ Applicable to merge a new node into an existing tiling. By new node
-    #     we mean a node that has no children yet and that has only a single
-    #     parent. """
-    #     assert len(self.children) == 0 and len(self.parents) == 1
-    #     current_node=self
-    #     while current_node.oldest_parent() is not None and \
-    #             current_node.oldest_parent().oldest_child() == current_node:
-    #         current_node=current_node.oldest_parent()
-    #     # Reaching the root without finding younger children -> self is node of
-    #     # the leftmost's part of the graph.
-    #     if current_node.oldest_parent() is None:
-    #         print "Stopping merge_left operation on {0}".format(self)
-    #         return 0, []
-    #     # Get parent
-    #     parent=current_node.oldest_parent()
-    #     # Get next older sibling
-    #     current_node=parent.find_next_older_neighbor(current_node)
-    #     # Find matching support and sign pattern
-    #     while not current_node.shares_support_with(self) and \
-    #                 len(current_node.children) > 0:
-    #         current_node=current_node.youngest_child()
-    #     if current_node is not None and current_node != self and \
-    #             current_node.shares_support_with(self):
-    #         # Found a node to merge with
-    #         # Fix beta max and parents! Note that the self node should not have
-    #         # children yet.
-    #         print "Merging {0} with {1}".format(current_node, self)
-    #         current_node.beta_max=self.beta_max
-    #         for parent in self.parents:
-    #             if current_node in parent.children:
-    #                 parent.children.remove(self)
-    #             else:
-    #                 parent.replace_child(self, current_node)
-    #         if len(current_node.children) > 0:
-    #             new_childless_tilingelements=current_node.find_children(
-    #                                             beta_min=self.beta_min,
-    #                                             beta_max=self.beta_max)
-    #             return 1, new_childless_tilingelements
-    #         else:
-    #             import pdb
-    #             pdb.set_trace()
-    #             return 1, []
-    #     else:
-    #         print "Stopping merge_left operation on {0}".format(self)
-    #         return 0, []
-    #
-    # def merge_right(self):
-    #     current_node=self
-    #     while current_node.youngest_parent() is not None and \
-    #             current_node.youngest_parent().youngest_child() == current_node:
-    #         current_node=current_node.youngest_parent()
-    #     if current_node.youngest_parent() is None:
-    #         print "Stopping merge_right operation on {0}".format(self)
-    #         # In case we reached the root without having found a candidate for
-    #         # merging the node
-    #         return 0, []
-    #     # Get oldest parent
-    #     parent=current_node.youngest_parent()
-    #     # Get next older sibling
-    #     current_node=parent.find_next_younger_neighbor(current_node)
-    #     # Find matching support and sign pattern
-    #     while not current_node.shares_support_with(self) and \
-    #                 len(current_node.children) > 0:
-    #         current_node=current_node.oldest_child()
-    #     if current_node is not None and current_node != self and \
-    #             current_node.shares_support_with(self):
-    #         # Found a node to merge with
-    #         # Fix beta max and parents! Note that the self node should not have
-    #         # children yet.
-    #         print "Merging {0} with {1}".format(current_node, self)
-    #         current_node.beta_min=self.beta_min
-    #         for parent in self.parents:
-    #             if current_node in parent.children:
-    #                 parent.children.remove(self)
-    #             else:
-    #                 parent.replace_child(self, current_node)
-    #         if len(current_node.children) > 0:
-    #             new_childless_tilingelements=current_node.find_children(
-    #                                             beta_min=self.beta_min,
-    #                                             beta_max=self.beta_max)
-    #             return 1, new_childless_tilingelements
-    #         else:
-    #             return 1, []
-    #     else:
-    #         print "Stopping merge_right operation on {0}".format(self)
-    #         return 0, []
 
     def find_left_merge_candidate(self):
         assert len(self.children) == 0 and len(self.parents) == 1
@@ -322,9 +253,6 @@ class TilingElement(object):
         # pdb.set_trace()
         # for child in children:
         #     assert len(child.parents) == 0
-        if children[-1].support == [5, 6]:
-            import pdb
-            pdb.set_trace()
         if len(children) == 0:
             return [], []
         children.sort(key = lambda x: x.beta_max)
@@ -373,23 +301,21 @@ class TilingElement(object):
             left_candidate.uniquefy_parents()
             left_candidate.children += right_candidate.children
             left_candidate.uniquefy_children()
-            left_candidate.n_element = np.minimum(left_candidate.n_element,
-                                                  right_candidate.n_element)
             # Fix parents of right candidate by replacing the child
             for parent in right_candidate.parents:
-                parent.replace_child(right_candidate, left_candidate)
-                parent.sort_children()
-                parent.uniquefy_children()
+                parent[0].replace_child(right_candidate, left_candidate)
+                parent[0].sort_children()
+                parent[0].uniquefy_children()
             # Fix parents of children[0] by replacing the child
             for parent in children[0].parents:
-                parent.replace_child(children[0], left_candidate)
-                parent.sort_children()
-                parent.uniquefy_children()
+                parent[0].replace_child(children[0], left_candidate)
+                parent[0].sort_children()
+                parent[0].uniquefy_children()
             # Fix children of right_candidate by replacing the parent
             for child in right_candidate.children:
-                child.replace_parent(right_candidate, left_candidate)
-                child.sort_parents()
-                parent.uniquefy_children()
+                child[0].replace_parent(right_candidate, left_candidate)
+                child[0].sort_parents()
+                child[0].uniquefy_children()
         else:
             if left_candidate is not None:
                 print "Merging {0} with {1}".format(left_candidate,
@@ -398,12 +324,13 @@ class TilingElement(object):
                 # to the same tiling element.
                 left_candidate.beta_max = children[0].beta_max
                 left_candidate.parents += children[0].parents
+                left_candidate.sort_parents()
                 left_candidate.uniquefy_parents()
                 # Fix parents of children[0] by replacing the child
                 for parent in children[0].parents:
-                    parent.replace_child(children[0], left_candidate)
-                    parent.sort_children()
-                    parent.uniquefy_children()
+                    parent[0].replace_child(children[0], left_candidate)
+                    parent[0].sort_children()
+                    parent[0].uniquefy_children()
                 if len(left_candidate.children) > 0:
                     # In this case the left candidate is not in the 'to-process'
                     # stack anymore, hence we need to compute the left-over
@@ -411,10 +338,6 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                 children[0].beta_min,
                                                 children[0].beta_max))
-                # Fix n_element number by decreasing it by one (since we merged)
-                # the left-most node
-                for child in children[1:]:
-                    child.n_element -= 1
             else:
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
@@ -424,12 +347,13 @@ class TilingElement(object):
                 # to the same tiling element.
                 right_candidate.beta_min = children[-1].beta_min
                 right_candidate.parents += children[-1].parents
+                right_candidate.sort_parents()
                 right_candidate.uniquefy_parents()
                 # Fix parents of children[0] by replacing the child
                 for parent in children[-1].parents:
-                    parent.replace_child(children[-1], right_candidate)
-                    parent.sort_children()
-                    parent.uniquefy_children()
+                    parent[0].replace_child(children[-1], right_candidate)
+                    parent[0].sort_children()
+                    parent[0].uniquefy_children()
                 if len(right_candidate.children) > 0:
                     # In this case the right candidate is not in the 'to-process'
                     # stack anymore, hence we need to compute the left-over
@@ -472,16 +396,16 @@ class TilingElement(object):
 
     def bds_order(self, bds_stack = None, distance = None):
         if bds_stack is None:
-            bds_stack = [(self, 0)]
+            bds_stack = [[self, 0]]
             distance = 1
         for child in self.children:
-            if child not in [x[0] for x in bds_stack]:
-                bds_stack.append([child, distance])
+            if child[0] not in [x[0] for x in bds_stack]:
+                bds_stack.append([child[0], distance])
             else:
-                item = [x for x in bds_stack if x[0] == child][0]
+                item = [x for x in bds_stack if x[0] == child[0]][0]
                 item[1] = np.minimum(distance, item[1])
         for child in self.children:
-            child.bds_order(bds_stack = bds_stack, distance = distance + 1)
+            child[0].bds_order(bds_stack = bds_stack, distance = distance + 1)
         return bds_stack
 
     def plot_graph(self):
@@ -493,14 +417,19 @@ class TilingElement(object):
                         s = 50.0)
             # Draw edges
             for child in element.children:
-                child_entry = [item for item in vertices if item[0] == child][0]
-                plt.arrow(0.5 * (element.beta_min + element.beta_max),
-                        -layer,
-                        0.5 * (child.beta_min + child.beta_max) - \
-                        0.5 * (element.beta_min + element.beta_max),
-                        -child_entry[1] + layer,
+                child_entry = [item for item in vertices if item[0] == child[0]]
+                xstart = 0.5 * (element.beta_min + element.beta_max)
+                xend = 0.5 * (child[0].beta_min + child[0].beta_max) - \
+                        0.5 * (element.beta_min + element.beta_max)
+                ystart = -layer
+                yend = -child_entry[0][1] + layer
+                plt.arrow(xstart, ystart, xend, yend,
                         head_width=0.04, head_length=0.075,fc="k", ec="k",
                         length_includes_head=True)
+                # plt.annotate("[{0},{1}]".format(child[1], child[2]),
+                #             xy=(0.5 * (xstart + xend), 0.5 * (ystart + yend)),
+                #             xytext=(0.5 * (xstart + xend), 0.5 * (ystart + yend)),
+                #             arrowprops=dict(facecolor='black', shrink=0.05))
         plt.xlabel('beta')
         plt.title('Support tiling graph')
         plt.show()
