@@ -24,8 +24,6 @@ def test_graph_operations(testcase):
         try:
             children = current_element.find_children(n_element)
             print children
-            import pdb
-            pdb.set_trace()
             uncompleted_children, children_for_stack = \
                                     TilingElement.merge_new_children(children)
             n_element += len(children_for_stack)
@@ -39,8 +37,10 @@ def test_graph_operations(testcase):
                 n_element += len(children_for_stack)
                 stack.extend(children_for_stack)
         except StopIteration:
+            dfs_stack = root_element.dfs_order()
+            root_element.plot_graph()
             import pdb
             pdb.set_trace()
 if __name__ == "__main__":
-    testcase = "TC1"
+    testcase = "TC2"
     test_graph_operations(testcase)

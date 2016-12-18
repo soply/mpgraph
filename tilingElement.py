@@ -1,6 +1,7 @@
 #coding: utf8
 from itertools import groupby
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from create_children_LARS import create_children_LARS, post_process_children
@@ -65,14 +66,12 @@ class TilingElement(object):
             np.array_equal(tilingelement.sign_pattern, self.sign_pattern)
 
     def add_child(self, beta_min, beta_max, support, signum, n_element):
-        te = TilingElement(beta_min, beta_max, support, signum,
+        self.children.append(TilingElement(beta_min, beta_max, support, signum,
                             [self], self.A, self.y, self.svdAAt_U,
-                            self.svdAAt_S, n_element, self.options)
-        self.children.append(te)
-        return te
+                            self.svdAAt_S, n_element, self.options))
+        return self.children[-1]
 
     def sort_children(self):
-        # self.children.sort(key=lambda x: x.beta_min)
         self.children.sort(key=lambda x: x.n_element)
 
     def sort_parents(self):
@@ -466,3 +465,33 @@ class TilingElement(object):
                     return False
             # A tree is only correct if the same holds for all its children
             return all([child.verify_tiling() for child in self.children])
+
+    def dfs_order(self, dfs_stack = None, distance = None):
+        if dfs_stack is None:
+            dfs_stack = []
+            distance = 0
+        if self not in [x[0] for x in dfs_stack]:
+            dfs_stack.append((self, distance))
+            for child in self.children:
+                child.dfs_order(dfs_stack = dfs_stack, distance = distance + 1)
+        return dfs_stack
+
+    def plot_graph(self):
+        vertices = self.dfs_order()
+        plt.figure()
+        for (i, (element, layer)) in enumerate(vertices):
+            # Draw nodes
+            plt.scatter(0.5 * (element.beta_min + element.beta_max), -layer,
+                        s = 50.0)
+            # Draw edges
+            for child in element.children:
+                child_entry = [item for item in vertices if item[0] == child][0]
+                plt.arrow(0.5 * (element.beta_min + element.beta_max),
+                        -layer,
+                        0.5 * (child.beta_min + child.beta_max) - \
+                        0.5 * (element.beta_min + element.beta_max),
+                        -child_entry[1] + layer,
+                        head_width=0.04, head_length=0.075,fc="k", ec="k",
+                        length_includes_head=True)
+        plt.xlabel('beta')
+        plt.show()
