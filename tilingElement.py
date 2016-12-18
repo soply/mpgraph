@@ -59,6 +59,7 @@ class TilingElement(object):
         for (i, child) in enumerate(children):
             new_tes.append(self.add_child(child[0][1], child[1][1], child[2],
                                             child[3], n_element + i))
+            print new_tes[-1].n_element
         return new_tes
 
     def shares_support_with(self, tilingelement):
@@ -321,6 +322,9 @@ class TilingElement(object):
         # pdb.set_trace()
         # for child in children:
         #     assert len(child.parents) == 0
+        if children[-1].support == [5, 6]:
+            import pdb
+            pdb.set_trace()
         if len(children) == 0:
             return [], []
         children.sort(key = lambda x: x.beta_max)
@@ -369,8 +373,8 @@ class TilingElement(object):
             left_candidate.uniquefy_parents()
             left_candidate.children += right_candidate.children
             left_candidate.uniquefy_children()
-            left_candidate.n_element = np.minimum(left_candidate,
-                                                  right_candidate)
+            left_candidate.n_element = np.minimum(left_candidate.n_element,
+                                                  right_candidate.n_element)
             # Fix parents of right candidate by replacing the child
             for parent in right_candidate.parents:
                 parent.replace_child(right_candidate, left_candidate)
@@ -466,18 +470,22 @@ class TilingElement(object):
             # A tree is only correct if the same holds for all its children
             return all([child.verify_tiling() for child in self.children])
 
-    def dfs_order(self, dfs_stack = None, distance = None):
-        if dfs_stack is None:
-            dfs_stack = []
-            distance = 0
-        if self not in [x[0] for x in dfs_stack]:
-            dfs_stack.append((self, distance))
-            for child in self.children:
-                child.dfs_order(dfs_stack = dfs_stack, distance = distance + 1)
-        return dfs_stack
+    def bds_order(self, bds_stack = None, distance = None):
+        if bds_stack is None:
+            bds_stack = [(self, 0)]
+            distance = 1
+        for child in self.children:
+            if child not in [x[0] for x in bds_stack]:
+                bds_stack.append([child, distance])
+            else:
+                item = [x for x in bds_stack if x[0] == child][0]
+                item[1] = np.minimum(distance, item[1])
+        for child in self.children:
+            child.bds_order(bds_stack = bds_stack, distance = distance + 1)
+        return bds_stack
 
     def plot_graph(self):
-        vertices = self.dfs_order()
+        vertices = self.bds_order()
         plt.figure()
         for (i, (element, layer)) in enumerate(vertices):
             # Draw nodes
@@ -494,4 +502,5 @@ class TilingElement(object):
                         head_width=0.04, head_length=0.075,fc="k", ec="k",
                         length_includes_head=True)
         plt.xlabel('beta')
+        plt.title('Support tiling graph')
         plt.show()

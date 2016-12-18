@@ -30,17 +30,17 @@ def test_graph_operations(testcase):
             stack.extend(children_for_stack)
             while len(uncompleted_children) > 0:
                 uncomp_child, beta_min, beta_max = uncompleted_children.pop(0)
-                children = uncomp_child.find_children(beta_min, beta_max)
+                children = uncomp_child.find_children(n_element, beta_min,
+                                                        beta_max)
                 tmp_uncomp_children, children_for_stack = \
                                     TilingElement.merge_new_children(children)
                 uncompleted_children.extend(tmp_uncomp_children)
                 n_element += len(children_for_stack)
                 stack.extend(children_for_stack)
         except StopIteration:
-            dfs_stack = root_element.dfs_order()
             root_element.plot_graph()
             import pdb
             pdb.set_trace()
 if __name__ == "__main__":
-    testcase = "TC2"
+    testcase = "TC4"
     test_graph_operations(testcase)
