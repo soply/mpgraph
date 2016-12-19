@@ -4,7 +4,7 @@ import sys
 
 import numpy as np
 
-import test_graph_operations as tgo
+import testcases_graph_operations as tgo
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 print os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir)
@@ -21,7 +21,8 @@ def test_graph_operations(testcase):
         "test_iterator": region_iterator
     }
     stack = []
-    root_element = TilingElement(base_region[0][1], base_region[1][1],
+    root_element = TilingElement(base_region[0][0], base_region[1][0],
+                                base_region[0][1], base_region[1][1],
                                 base_region[2], base_region[3], None,
                                 A, y, svdU, svdS, options = options)
     stack.append(root_element)
@@ -45,5 +46,5 @@ def test_graph_operations(testcase):
             import pdb
             pdb.set_trace()
 if __name__ == "__main__":
-    testcase = "TC4"
+    testcase = "TC6"
     test_graph_operations(testcase)

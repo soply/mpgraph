@@ -9,8 +9,10 @@ from create_children_LARS import create_children_LARS, post_process_children
 
 class TilingElement(object):
 
-    def __init__(self, beta_min, beta_max, support, sign_pattern, parents,
-                 A, y, svdAAt_U, svdAAt_S, options=None):
+    def __init__(self, alpha_min, alpha_max, beta_min, beta_max, support,
+                sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options=None):
+        self.alpha_min = alpha_min
+        self.alpha_max = alpha_max
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.support = support
@@ -26,8 +28,9 @@ class TilingElement(object):
 
     def __repr__(self):
         return ("TilingElement(Support: {0}, Sign pattern: {1}" +
-                " Beta range: {2})").format(self.support, self.sign_pattern,
-                                            [self.beta_min, self.beta_max])
+                " Parameter range: {2} )").format(self.support, self.sign_pattern,
+                                            [(self.alpha_min, self.beta_min),
+                                             (self.alpha_max, self.beta_max)])
 
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
@@ -52,8 +55,8 @@ class TilingElement(object):
         children.sort(key=lambda x: x[0][1])
         new_tes = []
         for (i, child) in enumerate(children):
-            new_tes.append(self.add_child(child[0][1], child[1][1], child[2],
-                                          child[3]))
+            new_tes.append(self.add_child(child[0][0], child[1][0], child[0][1],
+                                          child[1][1], child[2], child[3]))
         self.sort_children()
         return new_tes
 
@@ -61,11 +64,18 @@ class TilingElement(object):
         return np.array_equal(tilingelement.support, self.support) and \
             np.array_equal(tilingelement.sign_pattern, self.sign_pattern)
 
-    def add_child(self, beta_min, beta_max, support, signum):
-        te = TilingElement(beta_min, beta_max, support, signum,
-                           [[self, beta_min, beta_max]], self.A, self.y,
-                           self.svdAAt_U, self.svdAAt_S,
-                           self.options)
+    def can_be_merged_with(self, tilingelement):
+        return self.shares_support_with(tilingelement) and \
+                ((self.alpha_max == tilingelement.alpha_min and
+                  self.beta_max == tilingelement.beta_min) or
+                (self.alpha_min == tilingelement.alpha_max and
+                  self.beta_min == tilingelement.beta_max))
+
+    def add_child(self, alpha_min, alpha_max, beta_min, beta_max, support,
+                  signum):
+        te = TilingElement(alpha_min, alpha_max, beta_min, beta_max, support,
+                           signum, [[self, beta_min, beta_max]], self.A,
+                           self.y, self.svdAAt_U, self.svdAAt_S, self.options)
         self.children.append([te, beta_min, beta_max])
         return te
 
@@ -199,10 +209,10 @@ class TilingElement(object):
         # Get next older sibling
         current_node = parent.find_next_older_neighbor(current_node)
         # Find matching support and sign pattern
-        while not current_node.shares_support_with(self) and \
+        while not current_node.can_be_merged_with(self) and \
                 len(current_node.children) > 0:
             current_node = current_node.youngest_child()
-        if current_node is not None and current_node.shares_support_with(self):
+        if current_node is not None and current_node.can_be_merged_with(self):
             print "(2) Found left merge partner {0} for {1}".format(current_node,
                                                                     self)
             return current_node
@@ -227,10 +237,10 @@ class TilingElement(object):
         # Get next older sibling
         current_node = parent.find_next_younger_neighbor(current_node)
         # Find matching support and sign pattern
-        while not current_node.shares_support_with(self) and \
+        while not current_node.can_be_merged_with(self) and \
                 len(current_node.children) > 0:
             current_node = current_node.oldest_child()
-        if current_node is not None and current_node.shares_support_with(self):
+        if current_node is not None and current_node.can_be_merged_with(self):
             print "(2) Found right merge partner {0} for {1}".format(current_node,
                                                                      self)
             return current_node
@@ -279,11 +289,11 @@ class TilingElement(object):
                                                  children[0].beta_min,
                                                  right_candidate.beta_max))
                 else:
-                    # FIXME: Can also occur!!
                     # Remark: The left candidate will be the surviving one with
                     # the correct relations, hence we need to append the left
-                    # one here as well. Case where both sourrounding nodes have
-                    # already been processed.
+                    # one here as well.
+                    # Case where both sourrounding nodes have already been
+                    # processed.
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  children[0].beta_max))
@@ -293,6 +303,7 @@ class TilingElement(object):
             # Case we have searched for left and right candidates of single node
             # Case left_candidate + right_candidate + children node belong
             # to the same tiling element.
+            left_candidate.alpha_max = right_candidate.alpha_max
             left_candidate.beta_max = right_candidate.beta_max
             left_candidate.parents += children[0].parents + right_candidate.parents
             left_candidate.uniquefy_parents()
@@ -319,6 +330,7 @@ class TilingElement(object):
                                                     children[0])
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
+                left_candidate.alpha_max = children[0].alpha_max
                 left_candidate.beta_max = children[0].beta_max
                 left_candidate.parents += children[0].parents
                 left_candidate.sort_parents()
@@ -342,6 +354,7 @@ class TilingElement(object):
                                                     right_candidate)
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
+                right_candidate.alpha_min = children[-1].alpha_min
                 right_candidate.beta_min = children[-1].beta_min
                 right_candidate.parents += children[-1].parents
                 right_candidate.sort_parents()
@@ -422,7 +435,7 @@ class TilingElement(object):
                 child_entry = [item for item in vertices if item[0] == child[0]]
                 xstart = 0.5 * (element.beta_min + element.beta_max)
                 xend = 0.5 * (child[0].beta_min + child[0].beta_max) - \
-                    0.5 * (element.beta_min + element.beta_max)
+                       0.5 * (element.beta_min + element.beta_max)
                 ystart = -layer
                 yend = -child_entry[0][1] + layer
                 plt.arrow(xstart, ystart, xend, yend, head_width=0.04,
