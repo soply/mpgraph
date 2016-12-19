@@ -384,9 +384,9 @@ class TilingElement(object):
             ctr = 1
             while ctr < n_children:
                 if self.children[ctr-1][2] != self.children[ctr][1]:
-                print """Verification failed:
-                         self.children[ctr-1][2]!=self.children[ctr][1]: {0}, {1}""".format(
-                        self.children[ctr-1], self.children[ctr])
+                    print """Verification failed:
+                             self.children[ctr-1][2]!=self.children[ctr][1]: {0}, {1}""".format(
+                            self.children[ctr-1], self.children[ctr])
                     return False
                 ctr = ctr + 1
             if self.children[-1][2] != self.beta_max:
