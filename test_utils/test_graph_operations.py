@@ -209,6 +209,40 @@ def create_test_case_iterator(testcase):
             [[(0.0, 0.5), (0.0, 0.9), [10, 11, 12], [1.0, -1.0, -1.0]],
             [(0.0, 0.9), (0.0, 1.0), [10, 11, 13], [1.0, -1.0, -1.0]]],
         ])
+    elif testcase == "TC5":
+        """ Testcase with three layers firstly separated by the middle layer
+        but later closed again."""
+        # Test case 1 regions (see notes with Markus)
+        regions = iter([
+            [base_region],
+            #================ Layer 1 Start =======================#
+            [[(0.0, 0.0), (0.0, 0.3), [1], [1.0]],
+            [(0.0, 0.3), (0.0, 0.7), [5], [1.0]],
+            [(0.0, 0.7), (0.0, 1.0), [2], [1.0]]],
+            #================ Layer 2 Start =======================#
+            # Siblings of first offspring
+            [[(0.0, 0.0), (0.0, 0.3), [1, 2], [1.0, -1.0]]],
+            # Siblings of second offspring
+            [[(0.0, 0.3), (0.0, 0.7), [5, 1], [1.0, -1.0]]],
+            # Subsitutes for the two merge operations
+            [[(0.0, 0.7), (0.0, 1.0), [1, 2], [1.0, -1.0]]],
+            #================ Layer 3 Start =======================#
+            # Siblings of first offspring
+            [[(0.0, 0.0), (0.0, 0.3), [1, 2, 3], [1.0, -1.0, 1.0]]],
+            # Siblings of second offspring
+            [[(0.0, 0.3), (0.0, 0.7), [5, 1, 2], [1.0, -1.0, 1.0]]],
+            # Siblings of third offspring
+            [[(0.0, 0.7), (0.0, 1.0), [1, 2, 3], [1.0, -1.0, 1.0]]],
+            #================ Layer 4 Start =======================#
+            # Siblings of first offspring
+            [[(0.0, 0.0), (0.0, 0.3), [1, 2], [1.0, -1.0]]],
+            # Siblings of second offspring
+            [[(0.0, 0.3), (0.0, 0.7), [1, 2], [1.0, -1.0]]], # <- Merge
+            # Substitute the merge
+            [[(0.0, 0.3), (0.0, 0.7), [1, 2, 3], [1.0, -1.0, 1.0]]], # <- Merge
+            # Substitute the merge
+            [[(0.0, 0.3), (0.0, 1.0), [1, 2], [1.0, -1.0]]], # <- Merge
+        ])
     else:
         raise NotImplementedError("TC {0} not implemented.".format(testcase))
     return regions
