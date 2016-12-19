@@ -429,7 +429,8 @@ class TilingElement(object):
                     0.5 * (element.beta_min + element.beta_max)
                 ystart = -layer
                 yend = -child_entry[0][1] + layer
-                plt.arrow(xstart, ystart, xend, yend, head_width=0.04, head_length=0.075, fc="k", ec="k")#, length_includes_head=True)
+                plt.arrow(xstart, ystart, xend, yend, head_width=0.04,
+                          head_length=0.075, fc="k", ec="k") #, length_includes_head=True)
                 plt.annotate("[{0},{1}]".format(child[1], child[2]),
                              xy=(0.5 * (2 * xstart + xend),
                                  0.5 * (2 * ystart + yend)),
