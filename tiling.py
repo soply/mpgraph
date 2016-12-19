@@ -18,9 +18,9 @@ class Tiling(object):
     def __init__(self, A, y, u_real, prior = None, options = None):
         """ Contructor doc string """
         if options is None:
-            options = self._default_options()
+            options = self.default_options()
         else:
-            options = dict(self._default_options().items() + options.items())
+            options = dict(self.default_options().items() + options.items())
         # If prior knowledge on v is given
         if prior is not None:
             y = y - A.dot(prior)
@@ -64,7 +64,7 @@ class Tiling(object):
         print "Finished tiling creation..."
         self.root_element.plot_graph()
 
-    def _default_options(self):
+    def default_options(self):
         """ Default option setting """
         return {
             # Verbosity levels: 0: Results only,
@@ -77,6 +77,11 @@ class Tiling(object):
             # Processes spawned if multi-processing shall be used
             "max_processes" : 1,
         }
+
+    # def tabularise_results(self):
+
+
+
 
 def filter_children_sparsity(children, sparsity_bound):
     for child in children:

@@ -421,35 +421,56 @@ class TilingElement(object):
                 return False
             return all([child[0].verify_tiling() for child in self.children])
 
-    def bds_order(self, bds_stack=None, distance=None):
+    def bds_order(self, bds_stack=None, distance=None, visited_stack=None):
+        assert (bds_stack is None and distance is None and \
+                visited_stack is None) or (bds_stack is not None and \
+                distance is not None and visited_stack is not None)
         if bds_stack is None:
-            bds_stack = [[self, 0]]
+            bds_stack = {self : 0}
+            visited_stack = {}
+            # bds_stack = [[self, 0]]
             distance = 1
         for child in self.children:
-            if child[0] not in [x[0] for x in bds_stack]:
-                bds_stack.append([child[0], distance])
-            else:
-                item = [x for x in bds_stack if x[0] == child[0]][0]
-                item[1] = np.minimum(distance, item[1])
+            if child[0] not in bds_stack:
+                bds_stack[child[0]] = distance
+                # bds_stack.append([child[0], distance])
+            elif distance < bds_stack[child[0]]:
+                bds_stack[child[0]] = distance
+        visited_stack[self] = True
         for child in self.children:
-            child[0].bds_order(bds_stack=bds_stack, distance=distance + 1)
+            if child[0] not in visited_stack:
+                child[0].bds_order(bds_stack=bds_stack, distance=distance + 1,
+                                   visited_stack=visited_stack)
         return bds_stack
 
-    def plot_graph(self):
+    def plot_graph(self, y_mode = 'layered'):
         vertices = self.bds_order()
         plt.figure()
-        for (i, (element, layer)) in enumerate(vertices):
+        for  element, layer in vertices.iteritems():
+            # Skip root element
+            if layer == 0:
+                continue
             # Draw nodes
-            plt.scatter(0.5 * (element.beta_min + element.beta_max), -layer,
+            if y_mode == 'layered':
+                ycoord = -layer
+            else:
+                ycoord = 0.5 * (element.alpha_min + element.alpha_max)
+            plt.scatter(0.5 * (element.beta_min + element.beta_max), ycoord,
                         s=50.0)
             # Draw edges
             for child in element.children:
-                child_entry = [item for item in vertices if item[0] == child[0]]
+                child_entry = [item for item in list(vertices.iteritems())
+                                                        if item[0] == child[0]]
                 xstart = 0.5 * (element.beta_min + element.beta_max)
                 xend = 0.5 * (child[0].beta_min + child[0].beta_max) - \
                        0.5 * (element.beta_min + element.beta_max)
-                ystart = -layer
-                yend = -child_entry[0][1] + layer
+                if y_mode == 'layered':
+                    ystart = -layer
+                    yend = -child_entry[0][1] + layer
+                else:
+                    ystart = 0.5 * (element.alpha_min + element.alpha_max)
+                    yend = 0.5 * (child[0].alpha_min + child[0].alpha_max) - \
+                           0.5 * (element.alpha_min + element.alpha_max)
                 plt.arrow(xstart, ystart, xend, yend, head_width=0.04,
                           head_length=0.075, fc="k", ec="k") #, length_includes_head=True)
                 plt.annotate("[{0},{1}]".format(child[1], child[2]),
@@ -458,5 +479,5 @@ class TilingElement(object):
                              xytext=(0.5 * (2 * xstart + xend),
                                      0.5 * (2 * ystart + yend)))
         plt.xlabel('beta')
-        plt.title('Support tiling graph')
+        plt.title('Support tiling graph (mode: {0})'.format(y_mode))
         plt.show()
