@@ -39,7 +39,7 @@ class TilingElement(object):
             beta_max = self.beta_max
         if self.options["mode"] == "LARS":
             additional_indices, boundary_parameters, used_signs = \
-                create_children_LARS(self.support, self.signum, beta_min,
+                create_children_LARS(self.support, self.sign_pattern, beta_min,
                                      beta_max,
                                      self.options["env_minimiser"],
                                      self.svdAAt_U, self.svdAAt_S, self.A,
@@ -47,7 +47,7 @@ class TilingElement(object):
             children = post_process_children(additional_indices,
                                              boundary_parameters,
                                              used_signs, self.support,
-                                             self.old_sign)
+                                             self.sign_pattern)
         elif self.options["mode"] == "TEST":
             children = self.options["test_iterator"].next()
         else:
@@ -66,9 +66,11 @@ class TilingElement(object):
 
     def can_be_merged_with(self, tilingelement):
         return self.shares_support_with(tilingelement) and \
-                ((self.alpha_max == tilingelement.alpha_min and
-                  self.beta_max == tilingelement.beta_min) or
-                (self.alpha_min == tilingelement.alpha_max and
+                ((np.abs(self.alpha_max - tilingelement.alpha_min)/ \
+                    self.alpha_max < 1e-4 and \
+                  self.beta_max == tilingelement.beta_min) or \
+                (np.abs(self.alpha_min - tilingelement.alpha_max)/ \
+                    self.alpha_min < 1e-4 and \
                   self.beta_min == tilingelement.beta_max))
 
     def add_child(self, alpha_min, alpha_max, beta_min, beta_max, support,
@@ -189,6 +191,8 @@ class TilingElement(object):
                 return self.children[ctr + 1][0]
             ctr = ctr + 1
         else:
+            import pdb
+            pdb.set_trace()
             print ("Could not find next younger neighbor of node {0} in" +
                    " children of node {1}.").format(child, self)
             return None
@@ -259,6 +263,7 @@ class TilingElement(object):
         # pdb.set_trace()
         # for child in children:
         #     assert len(child.parents) == 0
+        print children
         if len(children) == 0:
             return [], []
         children.sort(key=lambda x: x.beta_max)
@@ -376,6 +381,13 @@ class TilingElement(object):
                 # corresponding candidates were None
                 children_for_stack.insert(len(children_for_stack), children[-1])
         return uncompleted_children, children_for_stack
+
+    @staticmethod
+    def base_region(beta_min, beta_max, A, y, svdU, svdS, options):
+        return TilingElement(100.0, 100.0, beta_min, beta_max,
+                            np.array([]).astype("uint32"),
+                            np.array([]).astype("int32"), None, A, y, svdU,
+                            svdS, options)
 
     def verify_tiling(self):
         """ Testing the integrity of the tree from this node on and below. A

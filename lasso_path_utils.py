@@ -31,7 +31,7 @@ def calc_hit_cand_selection(AI, AJ, y, support, signum):
     AtyJ = AJ.T.dot(y)
     if len(support) == 0:
         hit_cand = np.abs(AtyJ)
-        hit_signs = np.sign(AtyJ)
+        use_sign = np.sign(AtyJ)
     else:
         AjT_Ai_inverse_AtA = AJ.T.dot(AI).dot(\
             np.linalg.inv(AI.T.dot(AI)))
@@ -47,8 +47,7 @@ def calc_hit_cand_selection(AI, AJ, y, support, signum):
         use_sign[aux_bot < (-1.0)] = 1.0
         hit_bot = use_sign - aux_bot
         hit_cand = np.divide(hit_top, hit_bot)
-        hit_signs = np.sign(hit_cand)
-    return hit_cand, hit_sign
+    return hit_cand, use_sign
 
 def calc_hit_cand(A, y, support, signum):
     """ This method calculates the 'hit_candidates' for the Lasso path algorithm.
@@ -80,9 +79,9 @@ def calc_hit_cand(A, y, support, signum):
     J = np.setdiff1d(full_index_set, support)
     AJ = A[:, J]
     AI = A[:, support]
-    hit_cand_J, hit_sign_J = calc_hit_cand_selection(AI, AJ, y, support, signum)
+    hit_cand_J, use_sign_J = calc_hit_cand_selection(AI, AJ, y, support, signum)
     hit_cand = -1.0 * np.ones(A.shape[1])
-    hit_sign = np.zeros(A.shape[1])
-    hit_sign[J] = hit_sign_J
+    use_sign = np.zeros(A.shape[1])
+    use_sign[J] = use_sign_J
     hit_cand[J] = hit_cand_J
-    return hit_cand, hit_sign
+    return hit_cand, use_sign

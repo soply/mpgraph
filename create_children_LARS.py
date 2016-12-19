@@ -5,8 +5,10 @@ from itertools import repeat
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 from scipy import optimize
-from lasso_path_utils import (calc_hit_cand_selection, calc_hit_cand)
-from mp_utils import (calc_B_y_beta, calc_B_y_beta_selection)
+
+from lasso_path_utils import calc_hit_cand, calc_hit_cand_selection
+from mp_utils import calc_B_y_beta, calc_B_y_beta_selection
+
 
 def create_children_LARS(support, signum, beta_min, beta_max,
                          minimiser, svdAAt_U, svdAAt_S, A, y,
@@ -102,7 +104,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
         hit_candidates_mid, used_signs_mid = get_all_hit_cand(beta_mid)
         order_mid = np.argsort(hit_candidates_mid)
         if order_mid[-1] != order_max[-1]:
-            beta_tiling_mp_dac(support, signum, beta_mid, beta_max,
+            create_children_LARS(support, signum, beta_mid, beta_max,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
@@ -114,7 +116,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
                                used_signs_max=used_signs_max,
                                order_max=order_max)
         if order_mid[-1] != order_min[-1]:
-            beta_tiling_mp_dac(support, signum, beta_min, beta_mid,
+            create_children_LARS(support, signum, beta_min, beta_mid,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
