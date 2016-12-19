@@ -40,9 +40,10 @@ def test_graph_operations(testcase):
                 uncompleted_children.extend(tmp_uncomp_children)
                 stack.extend(children_for_stack)
         except StopIteration:
+            print "Verification: ", root_element.verify_tiling()
             root_element.plot_graph()
             import pdb
             pdb.set_trace()
 if __name__ == "__main__":
-    testcase = "TC5"
+    testcase = "TC4"
     test_graph_operations(testcase)

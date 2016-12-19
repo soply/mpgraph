@@ -98,7 +98,6 @@ class TilingElement(object):
                 n_parents -= 1
             else:
                 ctr += 1
-        # self.parents = [x[0] for x in groupby(self.parents)]
 
     def replace_child(self, child_to_replace, replacement):
         ctr = 0
@@ -109,11 +108,9 @@ class TilingElement(object):
                 self.children[ctr][0] = replacement
                 return 1
         else:
-            import pdb
-            pdb.set_trace()
-            print ("Could not find child {0} in the children of child {1} and" +
+            raise RuntimeError(("Could not find child {0} in the children of child {1} and" +
                    " thus could not replace it with child {2}").format(self,
-                                                                       child_to_replace, replacement)
+                        child_to_replace, replacement))
 
     def replace_parent(self, parent_to_replace, replacement):
         ctr = 0
@@ -124,11 +121,9 @@ class TilingElement(object):
                 self.parents[ctr][0] = replacement
                 return 1
         else:
-            import pdb
-            pdb.set_trace()
-            print ("Could not find child {0} in the parents of child {1} and" +
+            raise RuntimeError(("Could not find child {0} in the parents of child {1} and" +
                    " thus could not replace it with child {2}").format(self,
-                                                                       parent_to_replace, replacement)
+                        parent_to_replace, replacement))
 
     def oldest_child(self):
         if len(self.children) > 0:
@@ -256,11 +251,6 @@ class TilingElement(object):
         #     assert len(child.parents) == 0
         if len(children) == 0:
             return [], []
-        print "children: ", children
-
-        if children[0].support == [1,2]:
-            import pdb
-            pdb.set_trace()
         children.sort(key=lambda x: x.beta_max)
         left_candidate = children[0].find_left_merge_candidate()
         right_candidate = children[-1].find_right_merge_candidate()
@@ -378,27 +368,33 @@ class TilingElement(object):
         """ Testing the integrity of the tree from this node on and below. A
         tree is considered as being correct if
         (1) it has no children at all,
-        (2) the children's beta_min's and beta_max's of the children yield a
-            discretisation of this node's [beta_min, beta_max] range without any
-            holes and they span the same range [beta_min, beta_max] in total.
+        (2) for all beta inside [beta_min, beta_max] there is a distinct child
+            of this node.
         """
-        ctr = 0
         n_children = len(self.children)
         if n_children == 0:
             return True
-        elif self.beta_min != self.oldest_child().beta_min:
-            return False
-        elif self.beta_max != self.youngest_child().beta_max:
-            return False
-
         else:
-            while ctr + 1 < n_children:
-                if self.children[ctr].beta_max == self.children[ctr + 1].beta_min:
-                    ctr = ctr + 1
-                else:
+            # Check that shared boundary with first child starts at beta_min
+            if self.children[0][1] != self.beta_min:
+                print """Verification failed:
+                         self.children[0][1]!=self.beta_min: {0}, {1}""".format(
+                        self.children[0], self)
+                return False
+            ctr = 1
+            while ctr < n_children:
+                if self.children[ctr-1][2] != self.children[ctr][1]:
+                print """Verification failed:
+                         self.children[ctr-1][2]!=self.children[ctr][1]: {0}, {1}""".format(
+                        self.children[ctr-1], self.children[ctr])
                     return False
-            # A tree is only correct if the same holds for all its children
-            return all([child.verify_tiling() for child in self.children])
+                ctr = ctr + 1
+            if self.children[-1][2] != self.beta_max:
+                print """Verification failed:
+                         self.children[-1][2]!=self.beta_max: {0}, {1}""".format(
+                        self.children[-1], self)
+                return False
+            return all([child[0].verify_tiling() for child in self.children])
 
     def bds_order(self, bds_stack=None, distance=None):
         if bds_stack is None:
