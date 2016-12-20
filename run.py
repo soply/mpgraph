@@ -250,7 +250,7 @@ def main(argv):
     if task == 'run_single':
         M = 200
         N = 500
-        sparsity = 40
+        sparsity = 10
         c_min = 1.5
         c_max = 4.5
         signal_noise_level = 0.3

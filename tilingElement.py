@@ -421,27 +421,18 @@ class TilingElement(object):
                 return False
             return all([child[0].verify_tiling() for child in self.children])
 
-    def bds_order(self, bds_stack=None, distance=None, visited_stack=None):
-        assert (bds_stack is None and distance is None and \
-                visited_stack is None) or (bds_stack is not None and \
-                distance is not None and visited_stack is not None)
-        if bds_stack is None:
-            bds_stack = {self : 0}
-            visited_stack = {}
-            # bds_stack = [[self, 0]]
-            distance = 1
-        for child in self.children:
-            if child[0] not in bds_stack:
-                bds_stack[child[0]] = distance
-                # bds_stack.append([child[0], distance])
-            elif distance < bds_stack[child[0]]:
-                bds_stack[child[0]] = distance
-        visited_stack[self] = True
-        for child in self.children:
-            if child[0] not in visited_stack:
-                child[0].bds_order(bds_stack=bds_stack, distance=distance + 1,
-                                   visited_stack=visited_stack)
-        return bds_stack
+    def bds_order(self):
+        distance = 0
+        elements_in_bds_order = {self : distance}
+        element_queue = [self]
+        while len(element_queue) > 0:
+            element = element_queue.pop(0)
+            distance += 1
+            for child in element.children:
+                if child[0] not in elements_in_bds_order:
+                    elements_in_bds_order[child[0]] =  distance
+                    element_queue.append(child[0])
+        return elements_in_bds_order
 
     def plot_graph(self, y_mode = 'layered'):
         vertices = self.bds_order()
