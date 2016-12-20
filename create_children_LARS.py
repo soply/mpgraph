@@ -31,8 +31,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
                                                            beta, I=support,
                                                            J=[index1, index2])
         hit_candidates, used_signs = calc_hit_cand_selection(B_betaI, B_betaJ,
-                                                             y_beta, support,
-                                                             signum)
+                                                             y_beta, signum)
         return (hit_candidates[0] - hit_candidates[1])
 
     def candidate_difference_squared(beta, index1, index2):
@@ -41,8 +40,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
                                                            beta, I=support,
                                                            J=[index1, index2])
         hit_candidates, used_signs = calc_hit_cand_selection(B_betaI, B_betaJ,
-                                                             y_beta, support,
-                                                             signum)
+                                                             y_beta, signum)
         return (hit_candidates[0] - hit_candidates[1]) ** 2
     # Initialisation
     if additional_indices is None:

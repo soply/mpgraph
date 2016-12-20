@@ -1,8 +1,8 @@
 #coding: utf8
 import numpy as np
 
-def calc_hit_cand_selection(AI, AJ, y, support, signum):
-    """ This method calculates the 'hit_candidates' for the Lasso path algorithm.
+def calc_hit_cand_selection(AI, AJ, y, signum):
+    """ This method calculates the 'hit candidates' for the Lasso path algorithm.
     The hit candidates correspond to a subgradient that hits the required
     boundary |s| < 1, i.e. for alpha > alpha_hit[j] subgradient to index j would
     exceed the boudary, and thus the index should be taken into the active set.
@@ -20,16 +20,12 @@ def calc_hit_cand_selection(AI, AJ, y, support, signum):
     y : array, shape (n_measurements)
         The vector of measurements
 
-    support : array, shape (n_current_support)
-        Contains the indices to the current active support, e.g.
-        support = np.array([5., 10., 11.]).
-
     signum : array, shape (n_current_support)
         Contains the signs of the coefficients that are currently active, e.g.
         signum = np.array([1., -1., 1.]).
     """
     AtyJ = AJ.T.dot(y)
-    if len(support) == 0:
+    if len(signum) == 0:
         hit_cand = np.abs(AtyJ)
         use_sign = np.sign(AtyJ)
     else:
@@ -50,10 +46,11 @@ def calc_hit_cand_selection(AI, AJ, y, support, signum):
     return hit_cand, use_sign
 
 def calc_hit_cand(A, y, support, signum):
-    """ This method calculates the 'hit_candidates' for the Lasso path algorithm.
+    """ This method calculates the 'hit candidates' for the Lasso path algorithm.
     The hit candidates correspond to a subgradient that hits the required
     boundary |s| < 1, i.e. for alpha > alpha_hit[j] subgradient to index j would
     exceed the boudary, and thus the index should be taken into the active set.
+
     Note that in we fill the entries that are related to support in this
     implementation with -1's in the return vector. Since the support is usually
     small compared to the number of features, this does not produce a large
@@ -69,19 +66,83 @@ def calc_hit_cand(A, y, support, signum):
 
     support : array, shape (n_current_support)
         Contains the indices to the current active support, e.g.
-        support = np.array([5., 10., 11.]).
+        support = np.array([5, 10, 11]).
 
     signum : array, shape (n_current_support)
         Contains the signs of the coefficients that are currently active, e.g.
-        signum = np.array([1., -1., 1.]).
+        signum = np.array([1, -1, 1]).
     """
     full_index_set = np.arange(A.shape[1])
     J = np.setdiff1d(full_index_set, support)
     AJ = A[:, J]
     AI = A[:, support]
-    hit_cand_J, use_sign_J = calc_hit_cand_selection(AI, AJ, y, support, signum)
+    hit_cand_J, use_sign_J = calc_hit_cand_selection(AI, AJ, y, signum)
     hit_cand = -1.0 * np.ones(A.shape[1])
     use_sign = np.zeros(A.shape[1])
     use_sign[J] = use_sign_J
     hit_cand[J] = hit_cand_J
     return hit_cand, use_sign
+
+def calculate_cross_cand_selection(AI, y, signum):
+    """ This method calculates the "cross candidates" for the Lasso path
+    algorithm. Such cross candidates correspond to regularisation parameters
+    at which an entry which was previously active in the support becomes zero
+    again, hence the entry crosses/hits zero. Therefore such entries are kicked
+    out of the active set when such a candidate is the next regularisation
+    parameter in the grid.
+
+    Parameters
+    ----------
+    A : array, shape (n_measurements, n_features)
+        The sensing matrix A in the problem 1/2 || Ax - y ||_2^2 + alpha ||x||_1.
+
+    y : array, shape (n_measurements)
+        The vector of measurements
+
+    signum : array, shape (n_current_support)
+        Contains the signs of the coefficients that are currently active, e.g.
+        signum = np.array([1, -1, 1]).
+    """
+    if len(signum) == 0:
+        hit_cand = np.array([])
+    else:
+        inverseAtA = np.linalg.inv(AI.T.dot(AI))
+        cross_top = inverseAtA.dot(AI.T).dot(y)
+        cross_bot = inverseAtA.dot(signum)
+        cross_candidates = np.divide(cross_top, cross_bot)
+    return cross_candidates
+
+def calculate_cross_candidates(A, y, support, signum):
+    """ This method calculates the "cross candidates" for the Lasso path
+    algorithm. Such cross candidates correspond to regularisation parameters
+    at which an entry which was previously active in the support becomes zero
+    again, hence the entry crosses/hits zero. Therefore such entries are kicked
+    out of the active set when such a candidate is the next regularisation
+    parameter in the grid.
+
+    Note that in we fill the entries that are related to support in this
+    implementation with -1's in the return vector. Since the support is usually
+    small compared to the number of features, this does not produce a large
+    amount of overhead.
+
+    Parameters
+    ----------
+    A : array, shape (n_measurements, n_features)
+        The sensing matrix A in the problem 1/2 || Ax - y ||_2^2 + alpha ||x||_1.
+
+    y : array, shape (n_measurements)
+        The vector of measurements
+
+    support : array, shape (n_current_support)
+        Contains the indices to the current active support, e.g.
+        support = np.array([5, 10, 11]).
+
+    signum : array, shape (n_current_support)
+        Contains the signs of the coefficients that are currently active, e.g.
+        signum = np.array([1, -1, 1]).
+    """
+    AI = A[:,support]
+    cross_cand_I, use_sign_I = calculate_cross_cand_selection(AI, y, signum)
+    cross_cand = -1.0 * np.ones(A.shape[1])
+    cross_cand[support] = cross_cand_I
+    return cross_candidates
