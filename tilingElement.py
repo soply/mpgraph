@@ -6,7 +6,7 @@ import numpy as np
 
 from create_children_lars import (create_children_lars,
                                   lars_post_process_children)
-from create_children_lasso import (create_children_lasso,
+from create_children_lasso import (create_children_lasso, lasso_children_merge,
                                    lasso_post_process_children)
 
 
@@ -30,8 +30,8 @@ class TilingElement(object):
         self.options = options
 
     def __repr__(self):
-        return ("TilingElement(Support: {0}, Sign pattern: {1}" +
-                " Parameter range: {2} )").format(self.support, self.sign_pattern,
+        return ("TilingElement(Support: {0}" +
+                " Parameter range: {1})").format(self.support,
                                             [(self.alpha_min, self.beta_min),
                                              (self.alpha_max, self.beta_max)])
 
@@ -51,21 +51,15 @@ class TilingElement(object):
                                                   boundary_parameters,
                                                   used_signs, self.support,
                                                   self.sign_pattern)
+            children.sort(key=lambda x: x[0][1])
         elif self.options["mode"] == "LASSO":
             children = []
             # If this tiling element has different parents, we have to iterate
             # through these tilings separately because the recently added
             # component from parent to child changed then.
             for parent in self.parents:
-                if (parent[1] <= beta_min and parent[2] >= beta_min) or \
-                   (parent[1] <= beta_max and parent[2] >= beta_max):
-                    print self.support, parent[0].support
-                    if len(self.support) < len(parent[0].support):
-                        import pdb
-                        pdb.set_trace()
-                    print np.setdiff1d(self.support, parent[0].support)[0]
+                if (parent[1] <= beta_max and beta_min <= parent[2]): # Checks for overlap
                     new_index = np.setdiff1d(self.support, parent[0].support)[0]
-
                     additional_indices, boundary_parameters, used_signs = \
                         create_children_lasso(self.support, self.sign_pattern,
                                              np.maximum(beta_min, parent[1]), # beta_min
@@ -74,15 +68,19 @@ class TilingElement(object):
                                              self.svdAAt_U, self.svdAAt_S, self.A,
                                              self.y,
                                              new_index)
-            children.extend(lasso_post_process_children(additional_indices,
-                                                        boundary_parameters,
-                                                        used_signs, self.support,
-                                                        self.sign_pattern))
+                    children.extend(lasso_post_process_children(additional_indices,
+                                                            boundary_parameters,
+                                                            used_signs, self.support,
+                                                            self.sign_pattern))
+            children.sort(key=lambda x: x[0][1])
+            children = lasso_children_merge(children)
+
+
         elif self.options["mode"] == "TEST":
             children = self.options["test_iterator"].next()
+            children.sort(key=lambda x: x[0][1])
         else:
             raise NotImplementedError("Mode not implemented.")
-        children.sort(key=lambda x: x[0][1])
         new_tes = []
         for (i, child) in enumerate(children):
             new_tes.append(self.add_child(child[0][0], child[1][0], child[0][1],
@@ -171,32 +169,32 @@ class TilingElement(object):
         if len(self.children) > 0:
             return self.children[0][0]
         else:
-            print ("Tiling element: {0}\nNo children but asking for the" +
-                   " oldest child. ").format(self)
+            # print ("Tiling element: {0}\nNo children but asking for the" +
+            #        " oldest child. ").format(self)
             return None
 
     def youngest_child(self):
         if len(self.children) > 0:
             return self.children[-1][0]
         else:
-            print ("Tiling element: {0}\nNo children but asking for the" +
-                   " youngest child. ").format(self)
+            # print ("Tiling element: {0}\nNo children but asking for the" +
+            #        " youngest child. ").format(self)
             return None
 
     def oldest_parent(self):
         if self.parents is not None and len(self.parents) > 0:
             return self.parents[0][0]
         else:
-            print ("Tiling element: {0}\nNo parent but asking for the oldest" +
-                   " parent. ").format(self)
+            # print ("Tiling element: {0}\nNo parent but asking for the oldest" +
+            #        " parent. ").format(self)
             return None
 
     def youngest_parent(self):
         if self.parents is not None and len(self.parents) > 0:
             return self.parents[-1][0]
         else:
-            print ("Tiling element: {0}\nNo parent but asking for the" +
-                   " oldest parent. ").format(self)
+            # print ("Tiling element: {0}\nNo parent but asking for the" +
+            #        " oldest parent. ").format(self)
             return None
 
     def find_next_older_neighbor(self, child):
@@ -236,7 +234,7 @@ class TilingElement(object):
         # Reaching the root without finding younger children -> self is node of
         # the leftmost's part of the graph.
         if current_node.oldest_parent() is None:
-            print "(1) Stopping left search operation on {0}".format(self)
+            # print "(1) Stopping left search operation on {0}".format(self)
             return None
         # Get parent
         parent = current_node.oldest_parent()
@@ -247,12 +245,12 @@ class TilingElement(object):
                 len(current_node.children) > 0:
             current_node = current_node.youngest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
-            print "(2) Found left merge partner {0} for {1}".format(current_node,
-                                                                    self)
+            # print "(2) Found left merge partner {0} for {1}".format(current_node,
+            #                                                         self)
             return current_node
 
         else:
-            print "(3) Stopping left search operation on {0}".format(self)
+            # print "(3) Stopping left search operation on {0}".format(self)
             return None
 
     def find_right_merge_candidate(self):
@@ -264,7 +262,7 @@ class TilingElement(object):
         # Reaching the root without finding younger children -> self is node of
         # the leftmost's part of the graph.
         if current_node.youngest_parent() is None:
-            print "(1) Stopping right search operation on {0}".format(self)
+            # print "(1) Stopping right search operation on {0}".format(self)
             return None
         # Get parent
         parent = current_node.youngest_parent()
@@ -275,12 +273,12 @@ class TilingElement(object):
                 len(current_node.children) > 0:
             current_node = current_node.oldest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
-            print "(2) Found right merge partner {0} for {1}".format(current_node,
-                                                                     self)
+            # print "(2) Found right merge partner {0} for {1}".format(current_node,
+            #                                                          self)
             return current_node
 
         else:
-            print "(3) Stopping right search operation on {0}".format(self)
+            # print "(3) Stopping right search operation on {0}".format(self)
             return None
 
     @staticmethod
@@ -293,7 +291,6 @@ class TilingElement(object):
         # pdb.set_trace()
         # for child in children:
         #     assert len(child.parents) == 0
-        print children
         if len(children) == 0:
             return [], []
         children.sort(key=lambda x: x.beta_max)
@@ -361,8 +358,8 @@ class TilingElement(object):
                 child[0].uniquefy_children()
         else:
             if left_candidate is not None:
-                print "Merging {0} with {1}".format(left_candidate,
-                                                    children[0])
+                # print "Merging {0} with {1}".format(left_candidate,
+                #                                     children[0])
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 left_candidate.alpha_max = children[0].alpha_max
@@ -385,8 +382,8 @@ class TilingElement(object):
             else:
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
-                print "Merging {0} with {1}".format(children[-1],
-                                                    right_candidate)
+                # print "Merging {0} with {1}".format(children[-1],
+                #                                     right_candidate)
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 right_candidate.alpha_min = children[-1].alpha_min

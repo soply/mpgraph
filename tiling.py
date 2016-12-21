@@ -78,12 +78,16 @@ class Tiling(object):
             #                   1: Summary Tables,
             #                   2: Everything (debugging)
             "verbose": 2,
-            "mode": "LASSO",
+            "mode": "LARS",
             # Minimiser to find intersection between two curves
             "env_minimiser": "scipy_brentq",
             # Processes spawned if multi-processing shall be used
             "max_processes": 1,
         }
+
+    def find_support_to_supportsize(self, support_size):
+        tiling_elements = self.root_element.bds_order()
+        return [te for te in tiling_elements.keys() if len(te.support) == support_size]
 
     def tabularise_results(self):
         tiling_elements = self.root_element.bds_order()

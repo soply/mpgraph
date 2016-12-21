@@ -29,10 +29,10 @@ def create_children_lasso(support, signum, beta_min, beta_max,
     def candidate_difference(beta, index1, index2):
         I_in_support = np.where(np.in1d(support, np.array([index1, index2])))[0]
         J = np.setdiff1d([index1, index2], support[I_in_support])
-        print index1, index2, support
-        print I_in_support
-        print J
         if len(I_in_support) > 0:
+            print index1, index2, support
+            print I_in_support
+            print J
             import pdb
             pdb.set_trace()
         B_betaJ, B_betaI, y_beta = calc_B_y_beta_selection(A, y,
@@ -93,10 +93,9 @@ def create_children_lasso(support, signum, beta_min, beta_max,
         # Filter out all candidates that are above the current curve
         boun_at_max = candidates_max[last_entry_joined]
         boun_at_min = candidates_min[last_entry_joined]
-        import pdb
-        pdb.set_trace()
         neglect_entries = np.where(np.logical_or(candidates_min >= boun_at_min,
                                    candidates_max >= boun_at_max))[0]
+        neglect_entries = np.intersect1d(neglect_entries, support) # hit_candidates are automatically smaller???
         candidates_min[neglect_entries] = -1.0
         candidates_max[neglect_entries] = -1.0
         order_max = np.argsort(candidates_max)
@@ -193,8 +192,6 @@ def lasso_post_process_children(additional_indices, boundary_parameters,
             pos = bisect.bisect_left(old_support, index)
             new_support = np.delete(old_support, pos)
             new_signum = np.delete(old_signum, pos)
-            import pdb
-            pdb.set_trace()
         else:
             new_support = np.append(old_support, index)
             new_signum = np.append(old_signum, sign)
@@ -206,3 +203,17 @@ def lasso_post_process_children(additional_indices, boundary_parameters,
         region_refinement.append([param_min, param_max, new_support,
             new_signum])
     return region_refinement
+
+def lasso_children_merge(children):
+    ctr = 1
+    n_children = len(children)
+    while ctr < n_children:
+        # Check if support and signum coincide
+        if np.array_equal(children[ctr-1][2], children[ctr][2]) and \
+                np.array_equal(children[ctr-1][3], children[ctr][3]):
+            children[ctr-1][1] = children[ctr][1] # Replacing maximum parameters
+            del children[ctr]
+            n_children = n_children - 1
+        else:
+            ctr += 1
+    return children
