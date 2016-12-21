@@ -4,7 +4,10 @@ from itertools import groupby
 import matplotlib.pyplot as plt
 import numpy as np
 
-from create_children_LARS import create_children_LARS, post_process_children
+from create_children_lars import (create_children_lars,
+                                  lars_post_process_children)
+from create_children_lasso import (create_children_lasso,
+                                   lasso_post_process_children)
 
 
 class TilingElement(object):
@@ -37,17 +40,44 @@ class TilingElement(object):
             beta_min = self.beta_min
         if beta_max is None:
             beta_max = self.beta_max
-        if self.options["mode"] == "LARS":
+        if self.options["mode"] == "LARS" or self.parents is None:
             additional_indices, boundary_parameters, used_signs = \
-                create_children_LARS(self.support, self.sign_pattern, beta_min,
+                create_children_lars(self.support, self.sign_pattern, beta_min,
                                      beta_max,
                                      self.options["env_minimiser"],
                                      self.svdAAt_U, self.svdAAt_S, self.A,
                                      self.y)
-            children = post_process_children(additional_indices,
-                                             boundary_parameters,
-                                             used_signs, self.support,
-                                             self.sign_pattern)
+            children = lars_post_process_children(additional_indices,
+                                                  boundary_parameters,
+                                                  used_signs, self.support,
+                                                  self.sign_pattern)
+        elif self.options["mode"] == "LASSO":
+            children = []
+            # If this tiling element has different parents, we have to iterate
+            # through these tilings separately because the recently added
+            # component from parent to child changed then.
+            for parent in self.parents:
+                if (parent[1] <= beta_min and parent[2] >= beta_min) or \
+                   (parent[1] <= beta_max and parent[2] >= beta_max):
+                    print self.support, parent[0].support
+                    if len(self.support) < len(parent[0].support):
+                        import pdb
+                        pdb.set_trace()
+                    print np.setdiff1d(self.support, parent[0].support)[0]
+                    new_index = np.setdiff1d(self.support, parent[0].support)[0]
+
+                    additional_indices, boundary_parameters, used_signs = \
+                        create_children_lasso(self.support, self.sign_pattern,
+                                             np.maximum(beta_min, parent[1]), # beta_min
+                                             np.minimum(beta_max, parent[2]), # beta_max
+                                             self.options["env_minimiser"],
+                                             self.svdAAt_U, self.svdAAt_S, self.A,
+                                             self.y,
+                                             new_index)
+            children.extend(lasso_post_process_children(additional_indices,
+                                                        boundary_parameters,
+                                                        used_signs, self.support,
+                                                        self.sign_pattern))
         elif self.options["mode"] == "TEST":
             children = self.options["test_iterator"].next()
         else:

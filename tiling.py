@@ -78,7 +78,7 @@ class Tiling(object):
             #                   1: Summary Tables,
             #                   2: Everything (debugging)
             "verbose": 2,
-            "mode": "LARS",
+            "mode": "LASSO",
             # Minimiser to find intersection between two curves
             "env_minimiser": "scipy_brentq",
             # Processes spawned if multi-processing shall be used

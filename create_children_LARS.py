@@ -1,16 +1,13 @@
 # coding: utf8
-import copy
-from itertools import repeat
 
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor
 from scipy import optimize
 
 from lasso_path_utils import calc_hit_cand, calc_hit_cand_selection
 from mp_utils import calc_B_y_beta, calc_B_y_beta_selection
 
 
-def create_children_LARS(support, signum, beta_min, beta_max,
+def create_children_lars(support, signum, beta_min, beta_max,
                          minimiser, svdAAt_U, svdAAt_S, A, y,
                          additional_indices=None,
                          used_signs=None,
@@ -102,7 +99,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
         hit_candidates_mid, used_signs_mid = get_all_hit_cand(beta_mid)
         order_mid = np.argsort(hit_candidates_mid)
         if order_mid[-1] != order_max[-1]:
-            create_children_LARS(support, signum, beta_mid, beta_max,
+            create_children_lars(support, signum, beta_mid, beta_max,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
@@ -114,7 +111,7 @@ def create_children_LARS(support, signum, beta_min, beta_max,
                                used_signs_max=used_signs_max,
                                order_max=order_max)
         if order_mid[-1] != order_min[-1]:
-            create_children_LARS(support, signum, beta_min, beta_mid,
+            create_children_lars(support, signum, beta_min, beta_mid,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
@@ -127,12 +124,12 @@ def create_children_LARS(support, signum, beta_min, beta_max,
                                order_max=order_mid)
     return additional_indices, boundary_parameters, used_signs
 
-def post_process_children(additional_indices, boundary_parameters,
-        used_signs, support, old_sign):
+def lars_post_process_children(additional_indices, boundary_parameters,
+        used_signs, old_support, old_signum):
     region_refinement = []
     for i, (index, sign) in enumerate(zip(additional_indices, used_signs)):
-        new_support = np.append(support, index)
-        new_signum = np.append(old_sign, sign)
+        new_support = np.append(old_support, index)
+        new_signum = np.append(old_signum, sign)
         order = np.argsort(new_support)
         new_support, new_signum = new_support[order], new_signum[order]
         param_min = boundary_parameters[i+1]

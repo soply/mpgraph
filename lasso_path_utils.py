@@ -83,7 +83,7 @@ def calc_hit_cand(A, y, support, signum):
     hit_cand[J] = hit_cand_J
     return hit_cand, use_sign
 
-def calculate_cross_cand_selection(AI, y, signum):
+def calc_cross_cand_selection(AI, y, signum, indices):
     """ This method calculates the "cross candidates" for the Lasso path
     algorithm. Such cross candidates correspond to regularisation parameters
     at which an entry which was previously active in the support becomes zero
@@ -102,17 +102,21 @@ def calculate_cross_cand_selection(AI, y, signum):
     signum : array, shape (n_current_support)
         Contains the signs of the coefficients that are currently active, e.g.
         signum = np.array([1, -1, 1]).
+
+    indices: array, shape (n_indices)
+        Contains the indices that are of interested ie. to which we want to
+        calculate the cross value.
     """
     if len(signum) == 0:
         hit_cand = np.array([])
     else:
-        inverseAtA = np.linalg.inv(AI.T.dot(AI))
+        inverseAtA = np.linalg.inv(AI.T.dot(AI))[indices,:]
         cross_top = inverseAtA.dot(AI.T).dot(y)
-        cross_bot = inverseAtA.dot(signum)
+        cross_bot = inverseAtA[indices,:].dot(signum)
         cross_candidates = np.divide(cross_top, cross_bot)
     return cross_candidates
 
-def calculate_cross_candidates(A, y, support, signum):
+def calc_cross_cand(A, y, support, signum):
     """ This method calculates the "cross candidates" for the Lasso path
     algorithm. Such cross candidates correspond to regularisation parameters
     at which an entry which was previously active in the support becomes zero
@@ -142,7 +146,35 @@ def calculate_cross_candidates(A, y, support, signum):
         signum = np.array([1, -1, 1]).
     """
     AI = A[:,support]
-    cross_cand_I, use_sign_I = calculate_cross_cand_selection(AI, y, signum)
-    cross_cand = -1.0 * np.ones(A.shape[1])
-    cross_cand[support] = cross_cand_I
+    cross_cand_I = calc_cross_cand_selection(AI, y, signum,
+                                             np.arange(AI.shape[1]))
+    cross_candidates = -1.0 * np.ones(A.shape[1])
+    cross_candidates[support] = cross_cand_I
     return cross_candidates
+
+def calc_all_cand(A, y, support, signum):
+    """ This method calculates both cross and ht candidates for the Lasso path
+    algorithm and stores them in a single vector. Read function documentations
+    to cross and hit candidate calculation to obtain further information about
+    what a specific candidate means for the solution.
+
+    Parameters
+    ----------
+    A : array, shape (n_measurements, n_features)
+        The sensing matrix A in the problem 1/2 || Ax - y ||_2^2 + alpha ||x||_1.
+
+    y : array, shape (n_measurements)
+        The vector of measurements
+
+    support : array, shape (n_current_support)
+        Contains the indices to the current active support, e.g.
+        support = np.array([5, 10, 11]).
+
+    signum : array, shape (n_current_support)
+        Contains the signs of the coefficients that are currently active, e.g.
+        signum = np.array([1, -1, 1]).
+    """
+    cross_candidates = calc_cross_cand(A, y, support, signum)
+    candidates, used_sign = calc_hit_cand(A, y, support, signum)
+    candidates[support] = cross_candidates[support]
+    return candidates, used_sign

@@ -248,14 +248,14 @@ def main(argv):
     # elif task == 'plot_batch':
     #     show_meta_results(identifier)
     if task == 'run_single':
-        M = 200
+        M = 450
         N = 500
-        sparsity = 10
+        sparsity = 20
         c_min = 1.5
         c_max = 4.5
-        signal_noise_level = 0.3
+        signal_noise_level = 0.0
         measurement_noise_level = 0.20
-        random_seed = 123
+        random_seed = 345
         noise_type_signal = "linf_bounded"
         noise_type_measurements = "gaussian"
         np.random.seed(random_seed)
@@ -270,7 +270,7 @@ def main(argv):
                 random_seed = random_seed,
                 random_state = random_state)
         beta_min = 1e-6
-        beta_max = 100.0
+        beta_max = 1000.0
         n_layers = sparsity
         layers, tiling = wrapper_create_tiling(A, y, u_real, beta_min,
                                                beta_max, n_layers)
