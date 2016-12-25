@@ -248,11 +248,11 @@ def main(argv):
     # elif task == 'plot_batch':
     #     show_meta_results(identifier)
     if task == 'run_single':
-        M = 250
-        N = 300
-        sparsity = 10
+        M = 1250
+        N = 5000
+        sparsity = 40
         c_min = 1.5
-        c_max = 1.8
+        c_max = 10
         signal_noise_level = 0.12
         measurement_noise_level = 0.17
         random_seed = 3
@@ -270,13 +270,13 @@ def main(argv):
                 # random_seed = random_seed,
                 random_state = random_state)
         beta_min = 1e-5
-        beta_max = 1.0
+        beta_max = 50.0
         n_layers = sparsity
         tiling = wrapper_create_tiling(A, y, u_real, beta_min,
                                        beta_max, n_layers)
     elif task == 'run_batch':
-        N = [(450, 500)]
-        sparsity_levels = [10]
+        N = [(1250, 5000)]
+        sparsity_levels = [40]
         c_min = 1.5
         c_max = 4.5
         noise_lev_signal = 0.3

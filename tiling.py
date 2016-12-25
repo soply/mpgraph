@@ -103,6 +103,9 @@ class Tiling(object):
                                                       self.options)
         stack = [self.root_element]
         while len(stack) > 0:
+            print "Current stack size: {0}".format(len(stack))
+            print "Minimum support length on stack: {0}".format(
+                                                        len(stack[0].support))
             current_element = stack.pop(0)
             children = current_element.find_children()
             uncompleted_children, children_for_stack = \
@@ -118,11 +121,13 @@ class Tiling(object):
                 uncompleted_children.extend(tmp_uncomp_children)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
+
+
         print "Finished tiling creation..."
         self.root_element.verify_tiling()
         tab = self.tabularise_results()
         print tabulate(tab, headers = tabularised_result_column_descriptor())
-        self.root_element.plot_tiling(n_disc = 5)
+        # self.root_element.plot_tiling(n_disc = 3)
         import pdb
         pdb.set_trace()
 

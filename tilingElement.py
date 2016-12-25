@@ -5,11 +5,12 @@ from itertools import groupby
 import matplotlib.pyplot as plt
 import numpy as np
 
-from create_children_lars import (create_children_lars,
-                                  lars_post_process_children)
-from create_children_lasso import (create_children_lasso, lasso_children_merge,
-                                   lasso_post_process_children)
-from lasso_path_utils import calc_all_cand
+from create_children.create_children_lars import (create_children_lars,
+                                                  lars_post_process_children)
+from create_children.create_children_lasso import (create_children_lasso,
+                                                   lasso_children_merge,
+                                                   lasso_post_process_children)
+from create_children.lasso_path_utils import calc_all_cand
 from mp_utils import calc_B_y_beta
 
 
@@ -95,10 +96,42 @@ class TilingElement(object):
         return new_tes
 
     def shares_support_with(self, tilingelement):
+        """ Checks whether the current tiling element shares the support and
+        sign pattern with the given tiling element.
+
+        Parameters
+        -----------
+        self : object of class TilingElement
+            Current node
+
+        tilingelement : object of class TilingElement
+            Tiling element to compare to.
+
+        Returns
+        -----------
+        True if both tiling elements have the same support and sign pattern,
+        false otherwise.
+        """
         return np.array_equal(tilingelement.support, self.support) and \
             np.array_equal(tilingelement.sign_pattern, self.sign_pattern)
 
     def can_be_merged_with(self, tilingelement):
+        """ Checks whether the current tiling element can be merged with the
+        given tiling element. Two tiling elements can be merged if they share
+        the same support, sign pattern and have consecutive parameter regions.
+
+        Parameters
+        -----------
+        self : object of class TilingElement
+            Current tiling element
+
+        tilingelement : object of class TilingElement
+            Tiling element to compare to.
+
+        Returns
+        -----------
+        True if both tiling elements can be merged, false otherwise.
+        """
         return self.shares_support_with(tilingelement) and \
             ((np.abs(self.alpha_max - tilingelement.alpha_min) /
               self.alpha_max < 1e-4 and
@@ -116,10 +149,38 @@ class TilingElement(object):
         return te
 
     def sort_children(self):
-        self.children.sort(key=lambda x: x[1])  # x[0] : beta_min
+        """ Sorts the children of the current tiling element in place by the
+        minimum beta for which a child element can be reached from the current
+        element.
+
+        Remark
+        ----------
+        Since for each beta there should only be one distinct child element, the
+        operation is well defined.
+
+        Parameters
+        ----------
+        self : object of class TilingElement
+            Current tiling element
+        """
+        self.children.sort(key=lambda x: x[1])
 
     def sort_parents(self):
-        self.parents.sort(key=lambda x: x[1])  # x[0] : beta_min
+        """ Sorts the parents of the current tiling element in place by the
+        minimum beta for which the current element can be reached from a
+        respective parent element.
+
+        Remark
+        ----------
+        Since the current node has a distinct parent for each beta in
+        [self.beta_min, self.beta_max], the operation is well defined.
+
+        Parameters
+        ----------
+        self : object of class TilingElement
+            Current tiling element
+        """
+        self.parents.sort(key=lambda x: x[1])
 
     def uniquefy_children(self):
         # Assumes that children are in sorted order!
@@ -156,7 +217,8 @@ class TilingElement(object):
         else:
             raise RuntimeError(("Could not find child {0} in the children of child {1} and" +
                                 " thus could not replace it with child {2}").format(self,
-                                                                                    child_to_replace, replacement))
+                                                                                    child_to_replace,
+                                                                                    replacement))
 
     def replace_parent(self, parent_to_replace, replacement):
         ctr = 0
@@ -169,7 +231,8 @@ class TilingElement(object):
         else:
             raise RuntimeError(("Could not find child {0} in the parents of child {1} and" +
                                 " thus could not replace it with child {2}").format(self,
-                                                                                    parent_to_replace, replacement))
+                                                                                    parent_to_replace,
+                                                                                    replacement))
 
     def oldest_child(self):
         if len(self.children) > 0:
@@ -410,22 +473,6 @@ class TilingElement(object):
                              np.array([]).astype("uint32"),
                              np.array([]).astype("int32"), None, A, y, svdU,
                              svdS, options)
-
-    # def find_upper_boundary(self, beta):
-    #     assert beta >= self.beta_min and beta <= self.beta_max
-    #     assert len(self.parents) > 0
-    #     parent = [item for item in self.parents
-    #                                     if item[1] <= beta and item[2] >= beta]
-    #
-    #             region, layer_idx= self._find_support_to_beta(beta, i+1)
-    #             prev_tiling, prev_layer_idx = self._find_support_to_beta(beta, i)
-    #             J = np.setdiff1d(region[2], prev_tiling[2])
-    #             alpha, sign = calculate_hit_candidates(B_beta, y_beta,
-    #                 prev_tiling[2], prev_tiling[3], index_set_J = [J],
-    #                 AI = B_beta[:, prev_tiling[2]], AJ = B_beta[:, J])
-    #             points[i][j,0] = beta
-    #             points[i][j,1] = alpha[J]
-    #             colors[i].append(colorlist[layer_idx % 6])
 
     def verify_tiling(self):
         """ Testing the integrity of the tree from this node on and below. A
