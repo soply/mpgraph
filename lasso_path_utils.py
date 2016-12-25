@@ -39,8 +39,8 @@ def calc_hit_cand_selection(AI, AJ, y, signum):
         aux_bot = AjT_Ai_inverse_AtA.dot(signum)
         use_sign = np.sign(hit_top)
         # In special cases we have to override this choice! See below
-        use_sign[aux_bot > 1.0] = -1.0 # In this case it is a negative value anyway...
-        use_sign[aux_bot < (-1.0)] = 1.0
+        # use_sign[aux_bot > 1.0] = -1.0 # In this case it is a negative value anyway...
+        # use_sign[aux_bot < (-1.0)] = 1.0
         hit_bot = use_sign - aux_bot
         hit_cand = np.divide(hit_top, hit_bot)
     return hit_cand, use_sign
@@ -108,11 +108,11 @@ def calc_cross_cand_selection(AI, y, signum, indices):
         calculate the cross value.
     """
     if len(signum) == 0:
-        hit_cand = np.array([])
+        cross_candidates = np.array([])
     else:
         inverseAtA = np.linalg.inv(AI.T.dot(AI))[indices,:]
         cross_top = inverseAtA.dot(AI.T).dot(y)
-        cross_bot = inverseAtA[indices,:].dot(signum)
+        cross_bot = inverseAtA.dot(signum)
         cross_candidates = np.divide(cross_top, cross_bot)
     return cross_candidates
 

@@ -1,4 +1,5 @@
 # coding: utf8
+import operator
 from itertools import groupby
 
 import matplotlib.pyplot as plt
@@ -8,12 +9,14 @@ from create_children_lars import (create_children_lars,
                                   lars_post_process_children)
 from create_children_lasso import (create_children_lasso, lasso_children_merge,
                                    lasso_post_process_children)
+from lasso_path_utils import calc_all_cand
+from mp_utils import calc_B_y_beta
 
 
 class TilingElement(object):
 
     def __init__(self, alpha_min, alpha_max, beta_min, beta_max, support,
-                sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options=None):
+                 sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options=None):
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
@@ -32,8 +35,8 @@ class TilingElement(object):
     def __repr__(self):
         return ("TilingElement(Support: {0}" +
                 " Parameter range: {1})").format(self.support,
-                                            [(self.alpha_min, self.beta_min),
-                                             (self.alpha_max, self.beta_max)])
+                                                 [(self.alpha_min, self.beta_min),
+                                                  (self.alpha_max, self.beta_max)])
 
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
@@ -58,23 +61,26 @@ class TilingElement(object):
             # through these tilings separately because the recently added
             # component from parent to child changed then.
             for parent in self.parents:
-                if (parent[1] <= beta_max and beta_min <= parent[2]): # Checks for overlap
-                    new_index = np.setdiff1d(self.support, parent[0].support)[0]
+                # Checks for overlap
+                if (parent[1] - beta_max < -1e-14 and
+                        beta_min - parent[2] < -1e-14):
+                    new_index = np.setxor1d(self.support, parent[0].support)
+                    assert len(new_index) == 1
+                    new_index = new_index[0]
                     additional_indices, boundary_parameters, used_signs = \
                         create_children_lasso(self.support, self.sign_pattern,
-                                             np.maximum(beta_min, parent[1]), # beta_min
-                                             np.minimum(beta_max, parent[2]), # beta_max
-                                             self.options["env_minimiser"],
-                                             self.svdAAt_U, self.svdAAt_S, self.A,
-                                             self.y,
-                                             new_index)
+                                              np.maximum(beta_min, parent[1]),  # beta_min
+                                              np.minimum(beta_max, parent[2]),  # beta_max
+                                              self.options["env_minimiser"],
+                                              self.svdAAt_U, self.svdAAt_S, self.A,
+                                              self.y,
+                                              new_index)
                     children.extend(lasso_post_process_children(additional_indices,
-                                                            boundary_parameters,
-                                                            used_signs, self.support,
-                                                            self.sign_pattern))
+                                                                boundary_parameters,
+                                                                used_signs, self.support,
+                                                                self.sign_pattern))
             children.sort(key=lambda x: x[0][1])
             children = lasso_children_merge(children)
-
 
         elif self.options["mode"] == "TEST":
             children = self.options["test_iterator"].next()
@@ -94,12 +100,12 @@ class TilingElement(object):
 
     def can_be_merged_with(self, tilingelement):
         return self.shares_support_with(tilingelement) and \
-                ((np.abs(self.alpha_max - tilingelement.alpha_min)/ \
-                    self.alpha_max < 1e-4 and \
-                  self.beta_max == tilingelement.beta_min) or \
-                (np.abs(self.alpha_min - tilingelement.alpha_max)/ \
-                    self.alpha_min < 1e-4 and \
-                  self.beta_min == tilingelement.beta_max))
+            ((np.abs(self.alpha_max - tilingelement.alpha_min) /
+              self.alpha_max < 1e-4 and
+              self.beta_max == tilingelement.beta_min) or
+             (np.abs(self.alpha_min - tilingelement.alpha_max) /
+              self.alpha_min < 1e-4 and
+              self.beta_min == tilingelement.beta_max))
 
     def add_child(self, alpha_min, alpha_max, beta_min, beta_max, support,
                   signum):
@@ -149,8 +155,8 @@ class TilingElement(object):
                 return 1
         else:
             raise RuntimeError(("Could not find child {0} in the children of child {1} and" +
-                   " thus could not replace it with child {2}").format(self,
-                        child_to_replace, replacement))
+                                " thus could not replace it with child {2}").format(self,
+                                                                                    child_to_replace, replacement))
 
     def replace_parent(self, parent_to_replace, replacement):
         ctr = 0
@@ -162,8 +168,8 @@ class TilingElement(object):
                 return 1
         else:
             raise RuntimeError(("Could not find child {0} in the parents of child {1} and" +
-                   " thus could not replace it with child {2}").format(self,
-                        parent_to_replace, replacement))
+                                " thus could not replace it with child {2}").format(self,
+                                                                                    parent_to_replace, replacement))
 
     def oldest_child(self):
         if len(self.children) > 0:
@@ -205,11 +211,8 @@ class TilingElement(object):
                 return self.children[ctr - 1][0]
             ctr = ctr + 1
         else:
-            import pdb
-            pdb.set_trace()
-            print ("Could not find next older neighbor of node {0} in " +
-                   " children of node {1}.").format(child, self)
-            return None
+            raise RuntimeError(("Could not find next older neighbor of " +
+                                "{0} in children of node {1}.").format(child, self))
 
     def find_next_younger_neighbor(self, child):
         ctr = 0
@@ -219,11 +222,8 @@ class TilingElement(object):
                 return self.children[ctr + 1][0]
             ctr = ctr + 1
         else:
-            import pdb
-            pdb.set_trace()
-            print ("Could not find next younger neighbor of node {0} in" +
-                   " children of node {1}.").format(child, self)
-            return None
+            raise RuntimeError(("Could not find next younger neighbor of " +
+                                "{0} in children of node {1}.").format(child, self))
 
     def find_left_merge_candidate(self):
         assert len(self.children) == 0 and len(self.parents) == 1
@@ -286,11 +286,6 @@ class TilingElement(object):
         """ The beta ranges corresponding to the given children should be
         connected. Do not input only first and last children of a recently
         analysed node but all the children that have been found."""
-        # Check: Parents of children should be empty
-        # import pdb
-        # pdb.set_trace()
-        # for child in children:
-        #     assert len(child.parents) == 0
         if len(children) == 0:
             return [], []
         children.sort(key=lambda x: x.beta_max)
@@ -358,8 +353,8 @@ class TilingElement(object):
                 child[0].uniquefy_children()
         else:
             if left_candidate is not None:
-                # print "Merging {0} with {1}".format(left_candidate,
-                #                                     children[0])
+                print "Merging {0} with {1}".format(left_candidate,
+                                                    children[0])
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 left_candidate.alpha_max = children[0].alpha_max
@@ -382,8 +377,8 @@ class TilingElement(object):
             else:
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
-                # print "Merging {0} with {1}".format(children[-1],
-                #                                     right_candidate)
+                print "Merging {0} with {1}".format(children[-1],
+                                                    right_candidate)
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 right_candidate.alpha_min = children[-1].alpha_min
@@ -412,59 +407,156 @@ class TilingElement(object):
     @staticmethod
     def base_region(beta_min, beta_max, A, y, svdU, svdS, options):
         return TilingElement(100.0, 100.0, beta_min, beta_max,
-                            np.array([]).astype("uint32"),
-                            np.array([]).astype("int32"), None, A, y, svdU,
-                            svdS, options)
+                             np.array([]).astype("uint32"),
+                             np.array([]).astype("int32"), None, A, y, svdU,
+                             svdS, options)
+
+    # def find_upper_boundary(self, beta):
+    #     assert beta >= self.beta_min and beta <= self.beta_max
+    #     assert len(self.parents) > 0
+    #     parent = [item for item in self.parents
+    #                                     if item[1] <= beta and item[2] >= beta]
+    #
+    #             region, layer_idx= self._find_support_to_beta(beta, i+1)
+    #             prev_tiling, prev_layer_idx = self._find_support_to_beta(beta, i)
+    #             J = np.setdiff1d(region[2], prev_tiling[2])
+    #             alpha, sign = calculate_hit_candidates(B_beta, y_beta,
+    #                 prev_tiling[2], prev_tiling[3], index_set_J = [J],
+    #                 AI = B_beta[:, prev_tiling[2]], AJ = B_beta[:, J])
+    #             points[i][j,0] = beta
+    #             points[i][j,1] = alpha[J]
+    #             colors[i].append(colorlist[layer_idx % 6])
 
     def verify_tiling(self):
         """ Testing the integrity of the tree from this node on and below. A
-        tree is considered as being correct if
-        (1) it has no children at all,
-        (2) for all beta inside [beta_min, beta_max] there is a distinct child
-            of this node.
+        tree is considered valid if itself is valid and all its children are
+        valid. A node is valid if the exists a distinct(!) child for all betas
+        from which the node under consideration can be reached; or a node is
+        valid if it has not a single node.
+
+        Parameters
+        -----------
+        self : object of class TilingElement
+            Root element of the (sub)-tree that shall be verified.
+
+        Returns
+        ------------
+        True, if the (sub)-tree of this node is valid; false otherwise.
         """
-        n_children = len(self.children)
-        if n_children == 0:
-            return True
-        else:
-            # Check that shared boundary with first child starts at beta_min
-            if self.children[0][1] != self.beta_min:
+        elements = self.bds_order()
+        for element, layer in elements.iteritems():
+            n_children = len(element.children)
+            if n_children == 0:
+                continue
+            if element.children[0][1] != element.beta_min:
                 print """Verification failed:
-                         self.children[0][1]!=self.beta_min: {0}, {1}""".format(
-                        self.children[0], self)
+                         element.children[0][1]!=element.beta_min: {0}, {1}""".format(
+                    element.children[0], element)
                 return False
             ctr = 1
             while ctr < n_children:
-                if self.children[ctr-1][2] != self.children[ctr][1]:
+                if element.children[ctr - 1][2] != element.children[ctr][1]:
                     print """Verification failed:
-                             self.children[ctr-1][2]!=self.children[ctr][1]: {0}, {1}""".format(
-                            self.children[ctr-1], self.children[ctr])
+                             element.children[ctr-1][2]!=element.children[ctr][1]: {0}, {1}""".format(
+                        element.children[ctr - 1], element.children[ctr])
                     return False
                 ctr = ctr + 1
-            if self.children[-1][2] != self.beta_max:
+            if element.children[-1][2] != element.beta_max:
                 print """Verification failed:
-                         self.children[-1][2]!=self.beta_max: {0}, {1}""".format(
-                        self.children[-1], self)
+                         element.children[-1][2]!=element.beta_max: {0}, {1}""".format(
+                    element.children[-1], element)
                 return False
-            return all([child[0].verify_tiling() for child in self.children])
+        print "Verification passed"
+        return True
 
     def bds_order(self):
-        distance = 0
-        elements_in_bds_order = {self : distance}
+        elements_in_bds_order = {self: 0}
         element_queue = [self]
         while len(element_queue) > 0:
             element = element_queue.pop(0)
-            distance += 1
             for child in element.children:
                 if child[0] not in elements_in_bds_order:
-                    elements_in_bds_order[child[0]] =  distance
+                    elements_in_bds_order[child[0]] = \
+                        elements_in_bds_order[element] + 1
                     element_queue.append(child[0])
         return elements_in_bds_order
 
-    def plot_graph(self, y_mode = 'layered'):
+    def plot_tiling(self, n_disc=3):
+        """ Plot the support tiling outgoing from the given node as a root. We
+        use bds_order and the distance from the root_node to define some notion
+        of a layered structure. """
+        elements = self.bds_order()
+        max_layer = max(elements.iteritems(), key=operator.itemgetter(1))[1]
+        # Calculate elements in inverse relation ship, ie. layer to elements
+        # instead of elements to layer (we will omit zeroth layer)
+        reordered_dict = []
+        for i in range(1, max_layer + 1):
+            reordered_dict.append([e for e in elements.keys() if
+                                   elements[e] == i])
+            reordered_dict[-1].sort(key=lambda x: x.beta_min)
+        # Make an adaptive beta discretisation that guarantees at least n_disc
+        # points to represent the boundaries of each tiling element.
+        beta_disc_coarse = []
+        for element, layers in elements.iteritems():
+            beta_disc_coarse.append(element.beta_min)
+            beta_disc_coarse.append(element.beta_max)
+        beta_disc_coarse = np.unique(np.array(beta_disc_coarse))
+        beta_disc = np.zeros((len(beta_disc_coarse) - 1) * n_disc)
+        for i in range(len(beta_disc_coarse) - 1):
+            beta_disc[i * n_disc:(i + 1) * n_disc] = \
+                np.linspace(beta_disc_coarse[i], beta_disc_coarse[i + 1],
+                            n_disc)
+
+        points = [np.zeros((beta_disc.shape[0], 2)) for _ in range(max_layer)]
+        colors = [[] for _ in range(max_layer)]
+        colorlist = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        for j, beta in enumerate(beta_disc):
+            B_beta, y_beta = calc_B_y_beta(self.A, self.y, self.svdAAt_U,
+                                           self.svdAAt_S, beta)
+            for i, layer in enumerate(reordered_dict):
+                idx, element = [(idx, e) for (idx, e) in enumerate(layer)
+                                if e.beta_min <= beta and e.beta_max >= beta][0]
+                prev_element = [pe[0] for pe in element.parents if pe[1] <= beta
+                                and beta <= pe[2]][0]
+                J = np.setxor1d(element.support, prev_element.support)
+                alpha, sign = calc_all_cand(B_beta, y_beta,
+                                            prev_element.support,
+                                            prev_element.sign_pattern)
+                points[i][j, 0] = beta
+                points[i][j, 1] = alpha[J]
+                colors[i].append(colorlist[idx % 6])
+        plt.figure()
+        ax = plt.gca()
+        plt.title(r'Support tiling $u_{\alpha, \beta}$')
+        for i in range(max_layer):
+            for j in range(len(points[i]) - 1):
+                plt.plot(points[i][j:j + 2, 0], points[i][j:j + 2, 1],
+                         c=colors[i][j + 1], linewidth=2.0, alpha=0.5)
+                if i == 0:
+                    ax.fill_between(points[i][j:j + 2, 0],
+                                    points[i][j:j + 2, 1],
+                                    np.max(points[0][:, 1]),
+                                    facecolor=colorlist[0],
+                                    alpha=0.5, linewidth=0.0)
+                elif i < max_layer:
+                    ax.fill_between(points[i][j:j + 2, 0],
+                                    points[i][j:j + 2, 1],
+                                    points[i - 1][j:j + 2, 1],
+                                    facecolor=colors[i - 1][j + 1],
+                                    alpha=0.5, linewidth=0.0)
+                    if i == max_layer - 1:
+                        ax.fill_between(points[i][j:j + 2, 0], 0,
+                                        points[i][j:j + 2, 1],
+                                        facecolor=colors[i][j + 1],
+                                        alpha=0.5, linewidth=0.0)
+        plt.xlabel(r'$\beta$')
+        plt.ylabel(r'$\alpha$')
+        plt.show()
+
+    def plot_graph(self, y_mode='layered'):
         vertices = self.bds_order()
         plt.figure()
-        for  element, layer in vertices.iteritems():
+        for element, layer in vertices.iteritems():
             # Skip root element
             if layer == 0:
                 continue
@@ -478,24 +570,24 @@ class TilingElement(object):
             # Draw edges
             for child in element.children:
                 child_entry = [item for item in list(vertices.iteritems())
-                                                        if item[0] == child[0]]
+                               if item[0] == child[0]]
                 xstart = 0.5 * (element.beta_min + element.beta_max)
                 xend = 0.5 * (child[0].beta_min + child[0].beta_max) - \
-                       0.5 * (element.beta_min + element.beta_max)
+                    0.5 * (element.beta_min + element.beta_max)
                 if y_mode == 'layered':
                     ystart = -layer
                     yend = -child_entry[0][1] + layer
                 else:
                     ystart = 0.5 * (element.alpha_min + element.alpha_max)
                     yend = 0.5 * (child[0].alpha_min + child[0].alpha_max) - \
-                           0.5 * (element.alpha_min + element.alpha_max)
+                        0.5 * (element.alpha_min + element.alpha_max)
                 plt.arrow(xstart, ystart, xend, yend, head_width=0.04,
-                          head_length=0.075, fc="k", ec="k") #, length_includes_head=True)
+                          head_length=0.075, fc="k", ec="k")  # , length_includes_head=True)
                 plt.annotate("[{0},{1}]".format(child[1], child[2]),
                              xy=(0.5 * (2 * xstart + xend),
                                  0.5 * (2 * ystart + yend)),
                              xytext=(0.5 * (2 * xstart + xend),
                                      0.5 * (2 * ystart + yend)))
-        plt.xlabel('beta')
+        plt.xlabel(r'$\beta$')
         plt.title('Support tiling graph (mode: {0})'.format(y_mode))
         plt.show()

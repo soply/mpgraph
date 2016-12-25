@@ -1,5 +1,5 @@
 # coding: utf8
-
+import bisect
 import numpy as np
 from scipy import optimize
 
@@ -11,7 +11,7 @@ from mp_utils import calc_B_y_beta, calc_B_y_beta_selection
 
 def create_children_lasso(support, signum, beta_min, beta_max,
                          minimiser, svdAAt_U, svdAAt_S, A, y,
-                         last_entry_joined,
+                         last_entry_changed,
                          additional_indices=None,
                          used_signs=None,
                          boundary_parameters=None,
@@ -22,8 +22,20 @@ def create_children_lasso(support, signum, beta_min, beta_max,
                          used_signs_max=None,
                          order_max=None,
                          neglect_entries=None):
+    if beta_max - beta_min < 1e-10:
+        import pdb
+        pdb.set_trace()
     def get_all_cand(beta):
         B_beta, y_beta = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta)
+        J = np.setdiff1d(np.arange(A.shape[1]), support)
+
+        AJ = B_beta[:, J]
+        AI = B_beta[:, support]
+        AjT_Ai_inverse_AtA = AJ.T.dot(AI).dot(\
+            np.linalg.inv(AI.T.dot(AI)))
+        aux_bot = AjT_Ai_inverse_AtA.dot(signum)
+        print aux_bot[294 - len(np.where(support < 294)[0])]
+
         return calc_all_cand(B_beta, y_beta, support, signum)
 
     def candidate_difference(beta, index1, index2):
@@ -88,14 +100,35 @@ def create_children_lasso(support, signum, beta_min, beta_max,
 
     # Initialisation
     if additional_indices is None:
+        # if np.array_equal(support,[  0,   7,   9,  17,  36,  47,  63, 107, 115, 126, 130, 132, 144,
+        #        145, 153, 154, 164, 174, 192, 206, 217, 226, 238, 259, 267, 285,
+        #        287, 294]):
+        #     import pdb
+        #     pdb.set_trace()
         candidates_max, used_signs_max = get_all_cand(beta_max)
         candidates_min, used_signs_min = get_all_cand(beta_min)
         # Filter out all candidates that are above the current curve
-        boun_at_max = candidates_max[last_entry_joined]
-        boun_at_min = candidates_min[last_entry_joined]
+        boun_at_max = candidates_max[last_entry_changed]
+        boun_at_min = candidates_min[last_entry_changed]
         neglect_entries = np.where(np.logical_or(candidates_min >= boun_at_min,
                                    candidates_max >= boun_at_max))[0]
+        # Neglect also entries that have a minus value either at boun_at_max or
+        # at boun_at_min
+        neglect_entries_minus = np.where(np.logical_or(candidates_min < 0,
+                                   candidates_max < 0))[0]
+        # if np.array_equal(support,[  0,   7,   9,  17,  36,  47,  63, 107, 115, 126, 130, 132,
+        #        145, 153, 154, 164, 174, 192, 206, 217, 226, 238, 259, 267, 285,
+        #        287]):
+        #     betas = np.linspace(1e-6, 100, 1000)
+        #     vals = np.zeros((1000, A.shape[1]))
+        #     for i in range(1000):
+        #         vals[i,:], dummy = get_all_cand(betas[i])
+        #     import matplotlib.pyplot as plt
+        #     plt.plot(betas, vals)
+        #     import pdb
+        #     pdb.set_trace()
         neglect_entries = np.intersect1d(neglect_entries, support) # hit_candidates are automatically smaller???
+        neglect_entries = np.append(neglect_entries, neglect_entries_minus)
         candidates_min[neglect_entries] = -1.0
         candidates_max[neglect_entries] = -1.0
         order_max = np.argsort(candidates_max)
@@ -157,7 +190,7 @@ def create_children_lasso(support, signum, beta_min, beta_max,
         if order_mid[-1] != order_max[-1]:
             create_children_lasso(support, signum, beta_mid, beta_max,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
-                               last_entry_joined,
+                               last_entry_changed,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
                                boundary_parameters=boundary_parameters,
@@ -171,7 +204,7 @@ def create_children_lasso(support, signum, beta_min, beta_max,
         if order_mid[-1] != order_min[-1]:
             create_children_lasso(support, signum, beta_min, beta_mid,
                                minimiser, svdAAt_U, svdAAt_S, A, y,
-                               last_entry_joined,
+                               last_entry_changed,
                                additional_indices=additional_indices,
                                used_signs=used_signs,
                                boundary_parameters=boundary_parameters,
@@ -188,7 +221,7 @@ def lasso_post_process_children(additional_indices, boundary_parameters,
         used_signs, old_support, old_signum):
     region_refinement = []
     for i, (index, sign) in enumerate(zip(additional_indices, used_signs)):
-        if i in old_support:
+        if index in old_support:
             pos = bisect.bisect_left(old_support, index)
             new_support = np.delete(old_support, pos)
             new_signum = np.delete(old_signum, pos)

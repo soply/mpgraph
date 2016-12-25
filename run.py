@@ -250,12 +250,12 @@ def main(argv):
     if task == 'run_single':
         M = 250
         N = 300
-        sparsity = 9
+        sparsity = 10
         c_min = 1.5
         c_max = 1.8
         signal_noise_level = 0.12
         measurement_noise_level = 0.17
-        random_seed = 34567
+        random_seed = 3
         noise_type_signal = "linf_bounded"
         noise_type_measurements = "gaussian"
         np.random.seed(random_seed)
@@ -270,10 +270,10 @@ def main(argv):
                 # random_seed = random_seed,
                 random_state = random_state)
         beta_min = 1e-5
-        beta_max = 100000
+        beta_max = 1.0
         n_layers = sparsity
-        layers, tiling = wrapper_create_tiling(A, y, u_real, beta_min,
-                                               beta_max, n_layers)
+        tiling = wrapper_create_tiling(A, y, u_real, beta_min,
+                                       beta_max, n_layers)
     elif task == 'run_batch':
         N = [(450, 500)]
         sparsity_levels = [10]
