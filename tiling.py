@@ -9,8 +9,8 @@ from tilingElement import TilingElement
 from tilingVerification import plot_tiling, plot_tiling_graph, verify_tiling
 
 
-def wrapper_create_tiling(A, y, u_real, beta_min, beta_max, n_sparsity,
-                          prior=None, options=None):
+def wrapper_create_tiling(A, y, beta_min, beta_max, n_sparsity, prior=None,
+                          options=None):
     """ Wrapper for the tiling object. Creates the tiling object and directly
     runs the create_tiling method between given beta_min and beta_max.
 
@@ -21,13 +21,6 @@ def wrapper_create_tiling(A, y, u_real, beta_min, beta_max, n_sparsity,
 
     y : array, shape (n_measurements)
         Measurement vector in A(u+v) = y.
-
-    u_real : array, shape (n_features)
-        Vector u in A(u+v) = y that was used to create the datum y (in addition
-        to some disturbance v). As such it can be used to assess the
-        characteristics of the found solution u_(alpha, beta) with u_real but
-        it shall be noted that the splitting u + v is by no means unique. This
-        is only achieved by using regularisation terms to restrict the solution.
 
     beta_min : Positive real number
         Minimal boundary of beta for which the possible supports of a
@@ -73,7 +66,7 @@ def wrapper_create_tiling(A, y, u_real, beta_min, beta_max, n_sparsity,
 class Tiling(object):
     """ Doc string """
 
-    def __init__(self, A, y, u_real, prior=None, options=None):
+    def __init__(self, A, y, prior=None, options=None):
         """ Contructor doc string """
         if options is None:
             options = self.default_options()
@@ -84,21 +77,22 @@ class Tiling(object):
             y = y - A.dot(prior)
         self.A = A
         self.y = y
-        self.u_real = u_real
         self.prior = prior
         self.options = options
-        self.start_time = timer()
-        self.elapsed_time = 0
+        starttime_svd = timer()
         U, S, UT = np.linalg.svd(A.dot(A.T))
         self.svdU = U  # Pre-calc since needed very often
         self.svdS = S  # Pre-calc since needed very often
+        self.elapsed_time_svd = timer() - starttime_svd
+        self.elapsed_time_tiling = 0
         self.root_element = None
 
     def create_tiling(self, beta_min, beta_max, n_sparsity, options=None):
         # Override options if desired
-        print "Beginning tiling creation..."
         if options is not None:
             self.options = dict(self.options.items() + options.items())
+        print "Beginning tiling creation..."
+        starttime_tiling = timer()
         self.root_element = TilingElement.base_region(beta_min, beta_max, self.A,
                                                       self.y, self.svdU, self.svdS,
                                                       self.options)
@@ -122,17 +116,16 @@ class Tiling(object):
                 uncompleted_children.extend(tmp_uncomp_children)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
-
-
+        self.elapsed_time_tiling = timer() - starttime_tiling
         print "Finished tiling creation..."
-        verify_tiling(self.root_element)
-        # plot_tiling(self.root_element)
-        plot_tiling_graph(self.root_element)
-        tab = self.tabularise_results()
-        print tabulate(tab, headers = tabularised_result_column_descriptor())
-        # self.root_element.plot_tiling(n_disc = 3)
-        import pdb
-        pdb.set_trace()
+        # verify_tiling(self.root_element)
+        # # plot_tiling(self.root_element)
+        # plot_tiling_graph(self.root_element)
+        # tab = self.tabularise_results()
+        # print tabulate(tab, headers = tabularised_result_column_descriptor())
+        # # self.root_element.plot_tiling(n_disc = 3)
+        # import pdb
+        # pdb.set_trace()
 
 
     def default_options(self):
@@ -155,12 +148,15 @@ class Tiling(object):
         return [te for te in tiling_elements.keys() if
                                                 len(te.support) == support_size]
 
-    def tabularise_results(self):
+    def tabularise_results(self, u_real_for_comparison = None):
         tiling_elements = self.root_element.bds_order()
         tiling_elements = list(tiling_elements.iteritems())
         tiling_elements.sort(key=lambda x: (len(x[0].support), x[0].alpha_min))
         results = np.zeros((len(tiling_elements), 6))
-        real_support = np.where(self.u_real)[0]
+        if u_real_for_comparison is not None:
+            real_support = np.where(self.u_real)[0]
+        else:
+            real_support = np.zeros(self.A.shape[1])
         for (i, (te, layer)) in enumerate(tiling_elements):
             results[i,0] = te.alpha_min
             results[i,1] = te.beta_min

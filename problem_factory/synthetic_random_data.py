@@ -1,6 +1,28 @@
 # coding: utf8
 import numpy as np
 
+def create_specific_problem_data_from_problem(problem):
+    n_measurements = problem["n_measurements"]
+    n_features = problem["n_features"]
+    sparsity_level = problem["sparsity_level"]
+    smallest_signal = problem["smallest_signal"]
+    largest_signal = problem.get("largest_signal", None)
+    noise_type_signal = problem["noise_type_signal"]
+    noise_lev_signal = problem["noise_lev_signal"]
+    noise_type_measurements = problem["noise_type_measurements"]
+    noise_lev_measurements = problem["noise_lev_measurements"]
+    A = problem.get("A", None)
+    random_seed = problem.get("random_seed", None)
+    random_state = problem.get("random_state", None)
+    return create_specific_problem_data(n_measurements, n_features,
+                                        sparsity_level,
+                                        smallest_signal, largest_signal,
+                                        noise_type_signal,
+                                        noise_lev_signal,
+                                        noise_type_measurements,
+                                        noise_lev_measurements,
+                                        A, random_seed, random_state)
+
 
 def create_specific_problem_data(n_measurements, n_features, sparsity_level,
                                  smallest_signal, largest_signal=None,
