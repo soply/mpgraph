@@ -6,6 +6,7 @@ import numpy as np
 from tabulate import tabulate
 
 from tilingElement import TilingElement
+from tilingVerification import plot_tiling, plot_tiling_graph, verify_tiling
 
 
 def wrapper_create_tiling(A, y, u_real, beta_min, beta_max, n_sparsity,
@@ -124,7 +125,9 @@ class Tiling(object):
 
 
         print "Finished tiling creation..."
-        self.root_element.verify_tiling()
+        verify_tiling(self.root_element)
+        # plot_tiling(self.root_element)
+        plot_tiling_graph(self.root_element)
         tab = self.tabularise_results()
         print tabulate(tab, headers = tabularised_result_column_descriptor())
         # self.root_element.plot_tiling(n_disc = 3)
@@ -139,6 +142,7 @@ class Tiling(object):
             #                   1: Summary Tables,
             #                   2: Everything (debugging)
             "verbose": 2,
+            # Mode with which we search for next children
             "mode": "LARS",
             # Minimiser to find intersection between two curves
             "env_minimiser": "scipy_brentq",
@@ -166,6 +170,40 @@ class Tiling(object):
             results[i,5] = len(np.setdiff1d(te.support, real_support)) + \
                             len(np.setdiff1d(real_support, te.support))
         return results
+
+    def plot_tiling(self):
+        """ Wrapper for plotting the reconstructed tiling. Calls method from
+        tilingVerification.py on the root element.
+
+        Parameters
+        --------------
+        self: object of class Tiling
+            The reconstructed tiling.
+        """
+        plot_tiling(self.root_element)
+
+    def plot_tiling_graph(self):
+        """ Wrapper for plotting the graph corresponding to a tiling. Calls
+        method from tilingVerification.py on the root element.
+
+        Parameters
+        --------------
+        self: object of class Tiling
+            The reconstructed tiling.
+        """
+        plot_tiling_graph(self.root_element)
+
+    def verify_tiling(self):
+        """ Wrapper for verifying a reconstructed tiling. Calls method from
+        tilingVerification.py on the root element.
+
+        Parameters
+        --------------
+        self: object of class Tiling
+            The reconstructed tiling.
+        """
+        plot_tiling_graph(self.root_element)
+
 
 
 def filter_children_sparsity(children, sparsity_bound):

@@ -248,9 +248,9 @@ def main(argv):
     # elif task == 'plot_batch':
     #     show_meta_results(identifier)
     if task == 'run_single':
-        M = 1250
-        N = 5000
-        sparsity = 40
+        M = 250
+        N = 500
+        sparsity = 10
         c_min = 1.5
         c_max = 10
         signal_noise_level = 0.12
