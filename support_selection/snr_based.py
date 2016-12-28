@@ -1,4 +1,4 @@
-#coding: utf8
+# coding: utf8
 from timeit import default_timer as timer
 
 import numpy as np
@@ -7,8 +7,8 @@ from tabulate import tabulate
 from mp_utils import approximate_solve_mp_fixed_support
 
 
-def highest_support_constrained_snr(tiling, show_table = False,
-                                    target_support = None):
+def highest_support_constrained_snr(tiling, show_table=False,
+                                    target_support=None):
     """ Method to rank the supports connected to a reconstructed tiling by
     calculating the signal to noise ratio solely based on the support. In
     particular, this method calculates approximative solutions u_I and v_I
@@ -68,20 +68,20 @@ def highest_support_constrained_snr(tiling, show_table = False,
         te_supp = tilingelement.support
         u_I, v_I = approximate_solve_mp_fixed_support(te_supp, tiling.A,
                                                       tiling.y)
-        table[i,0] = len(te_supp)
-        table[i,1] = np.min(np.abs(u_I[te_supp])) # signal strength
-        table[i,2] = np.max(np.abs(v_I)) # noise level/noise strength
-        table[i,3] = table[i,1]/table[i,2]
-        table[i,4] = layer
+        table[i, 0] = len(te_supp)
+        table[i, 1] = np.min(np.abs(u_I[te_supp]))  # signal strength
+        table[i, 2] = np.max(np.abs(v_I))  # noise level/noise strength
+        table[i, 3] = table[i, 1] / table[i, 2]
+        table[i, 4] = layer
         if target_support is not None:
             # Set table[i,5] to symmetric support difference
-            table[i,5] = len(np.setdiff1d(te_supp, target_support)) + \
-                            len(np.setdiff1d(target_support, te_supp))
+            table[i, 5] = len(np.setdiff1d(te_supp, target_support)) + \
+                len(np.setdiff1d(target_support, te_supp))
     # Sort table
-    ranking = np.argsort(table[:,3])
-    table = table[ranking,:]
+    ranking = np.argsort(table[:, 3])
+    table = table[ranking, :]
     if show_table:
         header = ["# Active", "c", "d", "SNR", "Layer", "Symmetric Diff"]
-        print tabulate(table, headers = header)
+        print tabulate(table, headers=header)
     elapsed_time = timer() - starttime
     return table, elapsed_time
