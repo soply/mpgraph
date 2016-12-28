@@ -215,9 +215,8 @@ def solve_mp_fixed_support(alpha, beta, support, signum, B_beta, y_beta, A, y):
     rhs = rhs - alpha * signum
     u_ab_I = np.linalg.solve(matrix, rhs)
     rhs = y - A[:,support].dot(u_ab_I)
-    v_ab = regularised_least_squares_regression(beta,
-                                                support = np.arange(A.shape[1]),
-                                                matrix = A, rhs = rhs)
+    v_ab = regularised_least_squares_regression(beta, np.arange(A.shape[1]),
+                                                A, rhs)
     u_ab = np.zeros(A.shape[1])
     u_ab[support] = u_ab_I
     return u_ab, v_ab
@@ -255,6 +254,5 @@ def approximate_solve_mp_fixed_support(support, matrix, rhs):
     """
     u_I = least_squares_regression(support, matrix, rhs)
     rhs = rhs - matrix[:, support].dot(u_I[support])
-    v_I = least_squares_regression(support = np.arange(matrix.shape[1]),
-                                   matrix, rhs)
+    v_I = least_squares_regression(np.arange(matrix.shape[1]), matrix, rhs)
     return u_I, v_I

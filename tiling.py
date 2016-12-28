@@ -58,7 +58,7 @@ def wrapper_create_tiling(A, y, beta_min, beta_max, n_sparsity, prior=None,
         Processed tiling object that contains the graph corresponding to
         the support tiling that is caused by the given data.
     """
-    tiling = Tiling(A, y, u_real, prior, options)
+    tiling = Tiling(A, y, prior, options)
     tiling.create_tiling(beta_min, beta_max, n_sparsity)
     return tiling
 
@@ -118,15 +118,9 @@ class Tiling(object):
                                                            n_sparsity)))
         self.elapsed_time_tiling = timer() - starttime_tiling
         print "Finished tiling creation..."
-        # verify_tiling(self.root_element)
-        # # plot_tiling(self.root_element)
-        # plot_tiling_graph(self.root_element)
-        # tab = self.tabularise_results()
-        # print tabulate(tab, headers = tabularised_result_column_descriptor())
-        # # self.root_element.plot_tiling(n_disc = 3)
-        # import pdb
-        # pdb.set_trace()
-
+        if self.options.get('print_summary', False):
+            tab = self.tabularise_results()
+            print tabulate(tab, headers=tabularised_result_column_descriptor())
 
     def default_options(self):
         """ Default option setting """
@@ -140,7 +134,9 @@ class Tiling(object):
             # Minimiser to find intersection between two curves
             "env_minimiser": "scipy_brentq",
             # Processes spawned if multi-processing shall be used
-            "max_processes": 1,
+            "max_processes" :  1,
+            # Flag whether or not to print a summary at the end
+            "print_summary" : True
         }
 
     def find_support_to_supportsize(self, support_size):

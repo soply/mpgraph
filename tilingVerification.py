@@ -7,6 +7,7 @@ import numpy as np
 from create_children.lasso_path_utils import calc_all_cand
 from mp_utils import calc_B_y_beta
 
+
 def verify_tiling(tilingelement):
     """ Testing the integrity of the tree from this node on and below. A
     tree is considered valid if itself is valid and all its children are
