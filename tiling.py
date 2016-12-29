@@ -150,7 +150,7 @@ class Tiling(object):
         tiling_elements.sort(key=lambda x: (len(x[0].support), x[0].alpha_min))
         results = np.zeros((len(tiling_elements), 6))
         if u_real_for_comparison is not None:
-            real_support = np.where(self.u_real)[0]
+            real_support = np.where(u_real_for_comparison)[0]
         else:
             real_support = np.zeros(self.A.shape[1])
         for (i, (te, layer)) in enumerate(tiling_elements):

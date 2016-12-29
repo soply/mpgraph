@@ -61,6 +61,8 @@ def highest_support_constrained_snr(tiling, show_table=False,
         table = np.zeros((len(tiling_elements.keys()), 6))
     else:
         table = np.zeros((len(tiling_elements.keys()), 5))
+    best_tilingelement = None
+    best_snr = 0.0
     for i, (tilingelement, layer) in enumerate(tiling_elements.iteritems()):
         if layer == 0:
             # Skip root element
@@ -77,6 +79,9 @@ def highest_support_constrained_snr(tiling, show_table=False,
             # Set table[i,5] to symmetric support difference
             table[i, 5] = len(np.setdiff1d(te_supp, target_support)) + \
                 len(np.setdiff1d(target_support, te_supp))
+        if table[i, 3] > best_snr:
+            best_snr = table[i, 3]
+            best_tilingelement = tilingelement
     # Sort table
     ranking = np.argsort(table[:, 3])
     table = table[ranking, :]
@@ -84,4 +89,4 @@ def highest_support_constrained_snr(tiling, show_table=False,
         header = ["# Active", "c", "d", "SNR", "Layer", "Symmetric Diff"]
         print tabulate(table, headers=header)
     elapsed_time = timer() - starttime
-    return table, elapsed_time
+    return table, best_tilingelement, elapsed_time
