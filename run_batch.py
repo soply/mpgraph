@@ -74,6 +74,7 @@ def run_numerous_one_constellation(problem):
         json.dump(problem, f, sort_keys=True, indent=4)
 
     meta_results = np.zeros((9, problem['num_tests']))
+    np.random.seed(problem["random_seed"])
     # Arguments to run the tiling creation
     tiling_options = problem["tiling_options"]
     beta_min = problem["beta_min"]
@@ -178,9 +179,9 @@ def print_meta_results(folder):
     ------------
     folder: string
         Foldername of where to the respective find 'meta.txt' file. Note that
-        the full searched location is given by pwd+'/results/<folder>/meta.txt'.
+        the full searched location is given by pwd+'<folder>/meta.txt'.
     """
-    meta_results = np.loadtxt('results/' + folder + "/meta.txt")
+    meta_results = np.loadtxt(folder + "/meta.txt")
     num_tests = meta_results.shape[0]
     meta_summary = np.sum(meta_results, axis=0) / float(num_tests)
     print "================== META RESULTS ======================"
@@ -202,7 +203,7 @@ def print_meta_results(folder):
     highest_ranked_wrong = np.where(meta_results[:, 3] == 0)[0]
     print "Examples support not correct: {0}".format(incorrect_supp)
     print "Symmetric differences unequal to zero: {0}".format(
-                        zip(incorrect_supp, meta_results[1,incorrect_supp]))
+                        zip(incorrect_supp, meta_results[incorrect_supp, 1]))
     print "Examples tiling does not contain real support {0}".format(
                                                 tiling_does_not_contain_real)
     print "Examples highest ranked support is incorrect {0}".format(
@@ -246,7 +247,7 @@ def main(argv):
         }
         problem = {
             'identifier': identifier,
-            'num_tests': 10,
+            'num_tests': 100,
             'tiling_options': tiling_options,
             'beta_min': 1e-6,
             'beta_max': 100.0,
@@ -257,7 +258,7 @@ def main(argv):
             'smallest_signal': 1.5,
             'largest_signal': 2.0,
             'noise_type_signal': 'linf_bounded',
-            'noise_lev_signal': 0.15,
+            'noise_lev_signal': 0.3,
             'noise_type_measurements': 'gaussian',
             'noise_lev_measurements': 0.0,
             'random_seed': 1
@@ -265,7 +266,7 @@ def main(argv):
         run_numerous_one_constellation(problem)
     elif task == 'show':
         try:
-            print_meta_results(identifier)
+            print_meta_results('results/' + identifier + '/')
         except IOError:
             print ("Could not load specified file. Check folder  "
                     "'results/{0}/' for meta file please.'".format(identifier))
