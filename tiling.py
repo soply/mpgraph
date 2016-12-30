@@ -174,7 +174,7 @@ class Tiling(object):
         """
         plot_tiling(self.root_element)
 
-    def plot_tiling_graph(self):
+    def plot_tiling_graph(self, y_mode='layered'):
         """ Wrapper for plotting the graph corresponding to a tiling. Calls
         method from tilingVerification.py on the root element.
 
@@ -183,7 +183,7 @@ class Tiling(object):
         self: object of class Tiling
             The reconstructed tiling.
         """
-        plot_tiling_graph(self.root_element)
+        plot_tiling_graph(self.root_element, y_mode)
 
     def verify_tiling(self):
         """ Wrapper for verifying a reconstructed tiling. Calls method from
@@ -194,7 +194,7 @@ class Tiling(object):
         self: object of class Tiling
             The reconstructed tiling.
         """
-        plot_tiling_graph(self.root_element)
+        verify_tiling(self.root_element)
 
 
 
