@@ -115,6 +115,7 @@ def run_numerous_one_constellation(problem):
                                 tiling_contains_real=tiling_contains_real,
                                 highest_ranked_is_real=highest_ranked_is_real)
     create_meta_results(resultdir)
+    print_meta_results(resultdir)
 
 
 def create_meta_results(folder):
@@ -162,15 +163,63 @@ def create_meta_results(folder):
         i = i + 1
     np.savetxt(folder + "meta.txt", meta_results)
 
+def print_meta_results(folder):
+    """ Method to print out the meta results to the terminal. The print-out
+    shows:
+    1) Percentages of successful cases, percentage in which the tiling contains
+       the 'real support', and cases in which the highest ranked support is the
+       'real support'.
+    2) Statistics about the time for specific runs (mean, variance, min, max).
+    3) Suspicious cases with the failure reason: either the support is not
+       found in the tiling at all; or the highest ranked support due to the
+       ranking method selects another support.
+
+    Parameters
+    ------------
+    folder: string
+        Foldername of where to the respective find 'meta.txt' file. Note that
+        the full searched location is given by pwd+'/results/<folder>/meta.txt'.
+    """
+    meta_results = np.loadtxt('results/' + folder + "/meta.txt")
+    num_tests = meta_results.shape[0]
+    meta_summary = np.sum(meta_results, axis=0) / float(num_tests)
+    print "================== META RESULTS ======================"
+    print "1) Percentages:"
+    print "Support at the end recovered: {0}".format(meta_summary[0])
+    print "Tiling contains real support: {0}".format(meta_summary[2])
+    print "Highest ranked support is real: {0}".format(meta_summary[3])
+    print "\n2) Timings:"
+    print "Avg = {0}    \nVariance = {1}  \n0.95-range = {2}   \nMin = {3}   \nMax = {4}".format(
+        np.mean(meta_results[:, 4]),
+        np.var(meta_results[:, 4]),
+        [np.min(np.percentile(meta_results[:, 4], 0.95)),
+            np.max(np.percentile(meta_results[:, 4], 95))],
+        np.min(meta_results[:, 4]),
+        np.max(meta_results[:, 4]))
+    print "\n3) Suspicious cases:"
+    incorrect_supp = np.where(meta_results[:, 0] == 0)[0]
+    tiling_does_not_contain_real =  np.where(meta_results[:, 2] == 0)[0]
+    highest_ranked_wrong = np.where(meta_results[:, 3] == 0)[0]
+    print "Examples support not correct: {0}".format(incorrect_supp)
+    print "Symmetric differences unequal to zero: {0}".format(
+                        zip(incorrect_supp, meta_results[1,incorrect_supp]))
+    print "Examples tiling does not contain real support {0}".format(
+                                                tiling_does_not_contain_real)
+    print "Examples highest ranked support is incorrect {0}".format(
+                                                        highest_ranked_wrong)
 
 def main(argv):
     identifier = ''
+    task = ''
     helpstr = ("===============================================================\n"
-               "Run file by typing 'python run_batch.py -i <identifier>'.\n"
+               "Run file by typing 'python run_batch.py -t <task> -i <identifier>'.\n"
+               "<task> can be 'run' to simula a new batch or 'show' to show\n"
+               "results of a previous run. \n"
+               "<identifier> is an arbitraray folder name.\n"
                "The run characteristics are specified inside 'run_batch.py' file.\n"
                "===============================================================\n")
     try:
-        opts, args = getopt.getopt(argv, "h:i:p:", ["identifier="])
+        opts, args = getopt.getopt(argv, "ht:i:p:", ["task= identifier="])
     except getopt.GetoptError:
         print helpstr
         sys.exit(2)
@@ -180,35 +229,51 @@ def main(argv):
             sys.exit()
         elif opt in ("-i", "--identifier"):
             identifier = arg
+        elif opt in ("-t", "--task"):
+            task = arg
     if identifier == '':
-        print "Please add identifer. Run file as follows:\n"
+        print "Please add identifer and/or task. Run file as follows:\n"
         print helpstr
         sys.exit(2)
-    print "Running batch simulation. Results will be stored in folder {0}".format(
-        identifier)
-    tiling_options = {
-        'verbose': 1,
-        'mode': 'LARS',
-        'print_summary' : False
-    }
-    problem = {
-        'identifier': identifier,
-        'num_tests': 10,
-        'tiling_options': tiling_options,
-        'beta_min': 1e-6,
-        'beta_max': 100.0,
-        'upper_bound_tilingcreation': 9,
-        'n_measurements': 350,
-        'n_features': 1250,
-        'sparsity_level': 8,
-        'smallest_signal': 1.5,
-        'largest_signal': 2.0,
-        'noise_type_signal': 'linf_bounded',
-        'noise_lev_signal': 0.15,
-        'noise_type_measurements': 'gaussian',
-        'noise_lev_measurements': 0.0,
-        'random_seed': 1
-    }
-    run_numerous_one_constellation(problem)
+    if task == 'run':
+        print "Running batch simulation. Results will be stored in folder {0}".format(
+            identifier)
+
+        tiling_options = {
+            'verbose': 1,
+            'mode': 'LARS',
+            'print_summary' : False
+        }
+        problem = {
+            'identifier': identifier,
+            'num_tests': 10,
+            'tiling_options': tiling_options,
+            'beta_min': 1e-6,
+            'beta_max': 100.0,
+            'upper_bound_tilingcreation': 9,
+            'n_measurements': 350,
+            'n_features': 1250,
+            'sparsity_level': 8,
+            'smallest_signal': 1.5,
+            'largest_signal': 2.0,
+            'noise_type_signal': 'linf_bounded',
+            'noise_lev_signal': 0.15,
+            'noise_type_measurements': 'gaussian',
+            'noise_lev_measurements': 0.0,
+            'random_seed': 1
+        }
+        run_numerous_one_constellation(problem)
+    elif task == 'show':
+        try:
+            print_meta_results(identifier)
+        except IOError:
+            print ("Could not load specified file. Check folder  "
+                    "'results/{0}/' for meta file please.'".format(identifier))
+        finally:
+            sys.exit(2)
+    else:
+        print "Please add identifer and/or task. Run file as follows:\n"
+        print helpstr
+        sys.exit(2)
 if __name__ == "__main__":
     main(sys.argv[1:])
