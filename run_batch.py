@@ -3,7 +3,6 @@ import getopt
 import json
 import os
 import sys
-import textwrap
 
 import numpy as np
 
@@ -276,5 +275,6 @@ def main(argv):
         print "Please add identifer and/or task. Run file as follows:\n"
         print helpstr
         sys.exit(2)
+        
 if __name__ == "__main__":
     main(sys.argv[1:])
