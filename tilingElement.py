@@ -95,6 +95,26 @@ class TilingElement(object):
         self.sort_children()
         return new_tes
 
+    def child_to_beta(self, beta):
+        """ Returns the child element for the given beta.
+
+        Parameters
+        -------------
+        self : object of class TilingElement
+            Current node
+
+        beta : Positive, real number with self.beta_min <= beta <= self.beta_max.
+
+        Returns
+        ----------
+        Successor/child of this tiling element for a specific beta.
+        """
+        if len(self.children) > 0:
+            return [child for child in self.children if child[1] <= beta \
+                                                    and child[2] >= beta][0][0]
+        else:
+            return None
+
     def shares_support_with(self, tilingelement):
         """ Checks whether the current tiling element shares the support and
         sign pattern with the given tiling element.

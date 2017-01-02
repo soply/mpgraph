@@ -144,6 +144,19 @@ class Tiling(object):
         return [te for te in tiling_elements.keys() if
                                                 len(te.support) == support_size]
 
+    def find_supportpath_to_beta(self, beta):
+        assert self.root_element is not None
+        assert self.root_element.beta_min <= beta and \
+               self.root_element.beta_max >= beta
+        current_element = self.root_element
+        supports = []
+        sign_patterns = []
+        while current_element is not None:
+            supports.append(current_element.support)
+            sign_patterns.append(current_element.sign_pattern)
+            current_element = current_element.child_to_beta(beta)
+        return supports, sign_patterns
+
     def tabularise_results(self, u_real_for_comparison = None):
         tiling_elements = self.root_element.bds_order()
         tiling_elements = list(tiling_elements.iteritems())
