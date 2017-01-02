@@ -12,7 +12,7 @@ from support_selection.snr_based import highest_support_constrained_snr
 from tiling import wrapper_create_tiling
 
 
-def run_numerous_one_constellation(problem):
+def run_numerous_one_constellation(problem, results_prefix = None):
     """ Create numerous tilings of problems of type
 
         A * (u + v) = y + eps
@@ -26,7 +26,8 @@ def run_numerous_one_constellation(problem):
     Dictionary-key | Description
     ---------------------------
     identifier | Subfolder identifier where the results shall be stored. Full
-                 path will be "/results/<identifier>/".
+                 path will be "/results_batch/<identifier>/", or
+                 "<results_prefix>/<identifier>" if results_prefix is given.
     num_tests | Number of runs that shall be performed for the given
                 characteristics.
     tiling_options | Options for the tiling object. See documentation of the
@@ -59,14 +60,18 @@ def run_numerous_one_constellation(problem):
                   same random data is created.
 
     Method will save the results of each single run to a file called i_data.npz
-    in the folder 'results/<identifier>/'.
+    in the folder 'results_batch/<identifier>/', or if a 'results_prefix' is given, it
+    will be stored in '<results_prefix>/<identifier>/'.
     If the file already exists, the specific run will be skipped (this is
     useful if we want to stop a run in the middle and restart it). At the end
     of the run, meta results over all runs are created and stored to a file
     called meta.txt in the same folder. This can be used to analyse a specific
     batch of runs.
     """
-    resultdir = 'results/' + problem['identifier'] + '/'
+    if results_prefix is not None:
+        resultdir = results_prefix + problem['identifier'] + '/'
+    else:
+        resultdir = 'results_batch/' + problem['identifier'] + '/'
     if not os.path.exists(resultdir):
         os.makedirs(resultdir)
     with open(resultdir + 'log.txt', "a+") as f:
@@ -215,7 +220,7 @@ def main(argv):
                "Run file by typing 'python run_batch.py -t <task> -i <identifier>'.\n"
                "<task> can be 'run' to simula a new batch or 'show' to show\n"
                "results of a previous run. \n"
-               "<identifier> is an arbitraray folder name.\n"
+               "<identifier> is an arbitrary folder name.\n"
                "The run characteristics are specified inside 'run_batch.py' file.\n"
                "===============================================================\n")
     try:
@@ -246,8 +251,8 @@ def main(argv):
         }
         problem = {
             'identifier': identifier,
-            'num_tests': 100,
             'tiling_options': tiling_options,
+            'num_tests': 20,
             'beta_min': 1e-6,
             'beta_max': 100.0,
             'upper_bound_tilingcreation': 9,
@@ -265,10 +270,10 @@ def main(argv):
         run_numerous_one_constellation(problem)
     elif task == 'show':
         try:
-            print_meta_results('results/' + identifier + '/')
+            print_meta_results('results_batch/' + identifier + '/')
         except IOError:
             print ("Could not load specified file. Check folder  "
-                    "'results/{0}/' for meta file please.'".format(identifier))
+                    "'results_batch/{0}/' for meta file please.'".format(identifier))
         finally:
             sys.exit(2)
     else:
