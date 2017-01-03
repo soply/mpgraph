@@ -136,6 +136,55 @@ def create_children_lars(support, signum, beta_min, beta_max,
 
 def lars_post_process_children(additional_indices, boundary_parameters,
         used_signs, old_support, old_signum):
+    """ Takes the results of 'create_children_lars' method and translates them
+    into a python list of tuples. Each tuple is related to a new tiling element
+    and thus contains the following options:
+    0 - minimal parameters: Tuple (alpha_min, beta_min) related to a parameter
+                            pair where beta_min is the minimal beta for
+                            which we can reach the respective support, as a
+                            successor of the given 'old_support' and the
+                            alpha_min is the related minimal alpha parameter for
+                            which we obtain the respective support.
+    1 - maximal parameters : Tuple (alpha_max, beta_max) related to a parameter
+                            pair where beta_max is the maximal beta for which we
+                            can reach the respective support, as a sucessor of
+                            the given 'old_support', and the alpha_max is the
+                            related minimal alpha parameter for which we obtain
+                            the respective support.
+    2 - new_support : The new support build from combining old_support with a
+                      specific additional index.
+
+    3 - new_signum : The new signum build from combining the old signum with a
+                     specific additional sign.
+
+    Parameters
+    ---------------
+    additional_indices: Python list of integers
+        Each entry of the list is related to a new support by combining the old
+        support with an entry of additional_indices.
+
+    boundary_parameters : Python list of tuples (alpha, beta)
+        Parameter pairs at which an additional index is replaced by another one,
+        respectively at which we have a crossing in the related alpha-curves.
+
+    used_signs : Python list of {-1.0, 1.0} entries.
+        Contains an entry for each additional index to specify whether a
+        related index/entry will form the new support as a positive entry or a
+        negative entry. Thus, is used to form the new sign patterns related to
+        the new supports.
+
+    old_support : Python list of integer (n_old_support)
+        Old support whose successors we search for.
+
+    old_signum : Python list of {-1.0, 1.0} entries
+        Sign pattern related to old support.
+
+    Returns
+    -----------------
+    Returns a list with tuples where each tuple contains key information for a
+    new tiling element. The tuples contain entries (minimal_parameter,
+    maximal_parameters, new_support, new_signum) as specified above.
+    """
     region_refinement = []
     for i, (index, sign) in enumerate(zip(additional_indices, used_signs)):
         new_support = np.append(old_support, index)

@@ -120,31 +120,92 @@ class Tiling(object):
         print "Finished tiling creation..."
         if self.options.get('print_summary', False):
             tab = self.tabularise_results()
-            print tabulate(tab, headers=tabularised_result_column_descriptor())
+            print tabulate(tab, headers=["alpha_min", "beta_min", "alpha_max",
+                    "beta_max", "#Supp", "Sym. Dif."])
 
     def default_options(self):
-        """ Default option setting """
+        """ Returns a default option setting. Each option that is not overriden
+        by user-specified options will be used in the tiling creation.
+
+        Option dictonary-key | Description
+        ------------------------------------------------------------------------
+        verbose | Verbosity level determines how much print outs we have. The
+                  higher the integer value is chosen, the more print-outs will
+                  happen.
+        mode | Determines the mode to find children of a certain tiling element.
+               Currently available are:
+               'LARS' : Performs a 'least angle regression'-step to find new
+                        children of a specific tiling element.
+               'LASSO' : Performs a 'lasso path'-step to find new children of
+                         a specific tiling element.
+        env_minimiser | The minimiser that is used to minimise respective
+                        root-finding/minimisation problems to calculate the
+                        envelope in the chosen find_children method.
+        print_summary | If True, the results of the tiling creation are printed
+                        in tabularised form to the console. Otherwise, no
+                        print-outs will be done at the end.
+
+        Parameters
+        ----------------
+        self : object of class Tiling
+            Current tiling object.
+
+        Returns
+        ----------------
+        Default options settings as a python dictionary.
+        """
         return {
-            # Verbosity levels: 0: Results only,
-            #                   1: Summary Tables,
-            #                   2: Everything (debugging)
             "verbose": 2,
-            # Mode with which we search for next children
             "mode": "LARS",
-            # Minimiser to find intersection between two curves
             "env_minimiser": "scipy_brentq",
-            # Processes spawned if multi-processing shall be used
-            "max_processes" :  1,
-            # Flag whether or not to print a summary at the end
             "print_summary" : True
         }
 
     def find_support_to_supportsize(self, support_size):
+        """ Method to find all tiling elements in a calculated tiling that have
+        a support with size equal to a specified support size. Note that the
+        tiling has to be created prior to calling this method.
+
+        Parameters
+        ---------------
+        self : object of class Tiling
+            This tiling object
+
+        support_size : Integer
+            Support size of tiling elements that we want to find in the tiling.
+
+        Returns
+        ---------------
+        python list of objects of class TilingElement where all tiling elements
+        have a support equal to the given support size. Candidates are all
+        tiling elements that have been calculated before.
+        """
         tiling_elements = self.root_element.bds_order()
         return [te for te in tiling_elements.keys() if
                                                 len(te.support) == support_size]
 
     def find_supportpath_to_beta(self, beta):
+        """ Method to find all supports and sign patterns for a fixed beta in
+        the given tiling. Note that the tiling has to be calculated prior to
+        calling this method.
+
+        Parameters
+        ---------------
+        self : object of class Tiling
+            This tiling object
+
+        beta : Positive, real number
+            beta for which we want to return the support and sign-pattern path.
+            Note that the beta must be satisfy
+            self.root_element.beta_min <= beta <= self.root_element.beta_max.
+
+
+        Returns
+        ---------------
+        Tuple with two python lists. The first list contains all supports that
+        can be found in the tiling for a fixed beta. The second list contains
+        all sign patterns that belong to the supports in the first list.
+        """
         assert self.root_element is not None
         assert self.root_element.beta_min <= beta and \
                self.root_element.beta_max >= beta
@@ -158,6 +219,41 @@ class Tiling(object):
         return supports, sign_patterns
 
     def tabularise_results(self, u_real_for_comparison = None):
+        """ Method to tabulise the tiling results. Each row belongs to a single
+        tiling element and each row contains the following options about a
+        specific tiling element:
+        0 - alpha_min : Minimal regularisation parameter alpha for which we can
+                        reach a specific support.
+                        The corresponding beta regularisation parameter is given
+                        in the next entry.
+        1 - beta_min : Minimal regularisation parameter beta for which we can
+                       reach a specific support.
+        2 - alpha_max : Maximal regularisation parameter alpha for which we can
+                        reach a specific support.
+                        The corresponding beta regularisation parameter is given
+                        in the next entry.
+        3 - beta_max : Maximal regularisation parameter beta for which we can
+                       reach a specific support.
+        4 - Support size : Support size of the support of a tiling element.
+        Optional :
+        5 - Symmetric difference : Symmetric difference to a target support
+                                   where the target support is specified is
+                                   given by argument 'u_real_for_comparison'.
+
+        Parameters
+        --------------
+        self : object of class Tiling
+            This tiling object
+
+        u_real_for_comparison (optional) : array, shape (n_features)
+            Optional argument to provide a target support that should be used
+            for comparison with results contained in the tiling.
+
+        Returns
+        ----------------
+        array of shape (n_tiling_elements, 5 (6)) containing the tabularised
+        results. If 'u_real_for_comparison' is provided the columnsize is 6,
+        otherwise the columnsize is 5. """
         tiling_elements = self.root_element.bds_order()
         tiling_elements = list(tiling_elements.iteritems())
         tiling_elements.sort(key=lambda x: (len(x[0].support), x[0].alpha_min))
@@ -212,18 +308,23 @@ class Tiling(object):
 
 
 def filter_children_sparsity(children, sparsity_bound):
+    """ Creates and iterator out of a given list of children that yields only
+    children whose support is below a specific size. The size is specified by
+    sparsity_bound.
+
+    Parameters
+    -----------------
+    children : python iterable of objects of class TilingElement
+        List of tiling elements that are candidates to be yielded by the
+        resulting iterator.
+
+    sparsity_bound : integer
+        Upper bound for the support size of tiling elements that we will yield.
+
+    Returns
+    ------------------
+    Python iterator of tiling elements with supports below a given upper bound.
+    """
     for child in children:
         if len(child.support) < sparsity_bound:
             yield child
-
-def tabularised_result_column_descriptor():
-    """ Return a list with strings that explain the columns of the results_mp
-    and result_sp meaning. """
-    return [
-        "alpha_min",
-        "beta_min",
-        "alpha_max",
-        "beta_max",
-        "#Supp",
-        "Sym. Dif.",
-    ]
