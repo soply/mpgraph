@@ -14,8 +14,8 @@ problem = {
     'beta_min': 1e-6,
     'beta_max': 100.0,
     'upper_bound_tilingcreation': 15,
-    'n_measurements': 350,
-    'n_features': 1250,
+    'n_measurements': 250,
+    'n_features': 260,
     'sparsity_level': 8,
     'smallest_signal': 1.5,
     'largest_signal': 2.0,
@@ -58,7 +58,7 @@ class CompareToScipyLARSTestCase(unittest.TestCase):
         self.problem["random_state"] = random_state
         # Creating problem data
         A, y, u_real, v_real = create_specific_problem_data_from_problem(
-            self.problem)
+                                                                self.problem)
         # Run tiling creation
         self.tiling = wrapper_create_tiling(A, y, self.problem["beta_min"],
                                         self.problem["beta_max"],
@@ -85,6 +85,89 @@ class CompareToScipyLARSTestCase(unittest.TestCase):
 
         Passes if all calculated supports and sign patterns are equal."""
         for i, beta in enumerate(self.problem["betas_to_test"]):
+            tiling_supports, tiling_sign_patterns = \
+                self.tiling.find_supportpath_to_beta(beta)
+            for j in range(self.problem["upper_bound_tilingcreation"]):
+                scipy_sup = np.where(self.scipy_supports[i][:,j])[0]
+                self.assertTrue(np.array_equal(scipy_sup,
+                    tiling_supports[j]),
+                    'Wrong support {0}, {1}, {2}'.format(
+                    tiling_supports[j], scipy_sup, beta))
+                idx = self.scipy_sign_patterns[i][:,j] != 0
+                scipy_sign_pattern = self.scipy_sign_patterns[i][idx, j]
+                self.assertTrue(np.array_equal(scipy_sign_pattern,
+                    tiling_sign_patterns[j]),
+                    'Wrong sign pattern {0}, {1}, {2}'.format(
+                    scipy_sign_pattern, tiling_sign_patterns[j], beta))
+
+class CompareToScipyLASSOTestCase(unittest.TestCase):
+    """ Test class implementing a test that compares the tiling results with the
+    scipy implementation of the Lasso-path algorithm. Concretely, we use the
+    problem setup defined in the beginning of this file, and we create the
+    support tiling for this problem.
+    Afterwards, we run the scipy-lasso algorithm for each single beta in the
+    list problem['betas_to_test'], and we compare for each of these beta's the
+    support-paths and the related sign-patterns. If we spot a difference in the
+    results, the tests fail. Note that we do not compare the alpha's that
+    are related to these different supports and sign patterns.
+
+    The test characteristics (ie. the used example) can be altered by varying
+    the problem characteristics above. Note that we run both algorithm for
+    problem['upper_bound_tilingcreation'] iterations. """
+    def setUp(self):
+        """ Set up for the tests by calculating the tiling and the lars-path
+        for some distinct beta's given in problem['betas_to_test']. """
+        tiling_options = {
+            "verbose" : 0,
+            "mode" : "LASSO",
+            "print_summary" : True
+        }
+        self.problem = dict(problem.items() + \
+                            {"tiling_options" : tiling_options}.items())
+        # Create problem data
+        np.random.seed(problem["random_seed"])
+        random_state = np.random.get_state()
+        self.problem["random_state"] = random_state
+        # Creating problem data
+        A, y, u_real, v_real = create_specific_problem_data_from_problem(
+                                                                self.problem)
+        # Run tiling creation
+        self.tiling = wrapper_create_tiling(A, y, self.problem["beta_min"],
+                                        self.problem["beta_max"],
+                                        self.problem["upper_bound_tilingcreation"],
+                                        options=self.problem["tiling_options"])
+        self.scipy_supports = []
+        self.scipy_sign_patterns = []
+        for i, beta in enumerate(self.problem["betas_to_test"]):
+            B_beta, y_beta = calc_B_y_beta(A, y, self.tiling.svdU,
+                                           self.tiling.svdS, beta)
+            # Scipy implementation scales the the data by 1/n_samples -> we need
+            # to compensate for that
+            B_beta = np.sqrt(y_beta.shape[0]) * B_beta
+            y_beta = np.sqrt(y_beta.shape[0]) * y_beta
+            alphas, active, coefs = linear_model.lars_path(B_beta, y_beta,
+                                    method = 'lasso',
+                                    max_iter = self.problem["upper_bound_tilingcreation"])
+            self.scipy_sign_patterns.append(np.sign(coefs))
+            self.scipy_supports.append(coefs.astype("bool"))
+
+    def test_support_equality(self):
+        """ Tests the support and sign pattern equality of the scipy
+        implementation and our tiling implementation.
+
+        Passes if all calculated supports and sign patterns are equal."""
+        for i, beta in enumerate(self.problem["betas_to_test"]):
+            # Remark: Note that it can happen that in the tiling creation
+            #         the number of supports for fixed beta (ie. sizes of
+            #         tiling_suppots and tiling_sign_patterns as below) is
+            #         larger than self.problem["upper_bound_tilingcreation"].
+            #         This is because we prescribe a fixed support size as the
+            #         stopping criterion in the tiling creation whereas the scipy
+            #         implementation considers the number of Lasso-path steps.
+            #         We neglect those additionally found supports from the
+            #         tiling creation; instead we compare only the first
+            #         self.problem["upper_bound_tilingcreation"] supports
+            #         along each fixed beta to the scipy supports.
             tiling_supports, tiling_sign_patterns = \
                 self.tiling.find_supportpath_to_beta(beta)
             for j in range(self.problem["upper_bound_tilingcreation"]):
