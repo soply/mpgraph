@@ -35,14 +35,15 @@ def highest_support_constrained_snr(tiling, show_table=False,
 
     Returns
     -----------------
-    table: Numpy array, shape (n_tilingelements, 5 or 6)
+    table: Numpy array, shape (n_tilingelements, 6 or 7)
         The results of the support ranking, columnwise meaning:
-            0 : Length of support of tiling element
-            1 : Signal strength min(|u_i|, i in suppport(tilingelement))
-            2 : Noise strength np.max(np.abs(v_I))
-            3 : Signal to noise ratio (entry 1 / entry 2)
-            4 : Distance from root element (minimal number of Lasso path steps)
-            5 (optional) : Symmetric difference to target support
+            0 : Unique identifier of the tiling element in the complete tiling.
+            1 : Length of support of tiling element
+            2 : Signal strength min(|u_i|, i in suppport(tilingelement))
+            3 : Noise strength np.max(np.abs(v_I))
+            4 : Signal to noise ratio (entry 1 / entry 2)
+            5 : Distance from root element (minimal number of Lasso path steps)
+            6 (optional) : Symmetric difference to target support
 
     best_tilingelement : Tilingelement of the tiling that scores the highest
         signal to noise ratio.
@@ -58,9 +59,9 @@ def highest_support_constrained_snr(tiling, show_table=False,
     starttime = timer()
     tiling_elements = tiling.root_element.bds_order()
     if target_support is not None:
-        table = np.zeros((len(tiling_elements.keys()), 6))
+        table = np.zeros((len(tiling_elements.keys()), 7))
     else:
-        table = np.zeros((len(tiling_elements.keys()), 5))
+        table = np.zeros((len(tiling_elements.keys()), 6))
     best_tilingelement = None
     best_snr = 0.0
     for i, (tilingelement, layer) in enumerate(tiling_elements.iteritems()):
@@ -70,23 +71,25 @@ def highest_support_constrained_snr(tiling, show_table=False,
         te_supp = tilingelement.support
         u_I, v_I = approximate_solve_mp_fixed_support(te_supp, tiling.A,
                                                       tiling.y)
-        table[i, 0] = len(te_supp)
-        table[i, 1] = np.min(np.abs(u_I[te_supp]))  # signal strength
-        table[i, 2] = np.max(np.abs(v_I))  # noise level/noise strength
-        table[i, 3] = table[i, 1] / table[i, 2]
-        table[i, 4] = layer
+        table[i, 0] = tilingelement.identifier
+        table[i, 1] = len(te_supp)
+        table[i, 2] = np.min(np.abs(u_I[te_supp]))  # signal strength
+        table[i, 3] = np.max(np.abs(v_I))  # noise level/noise strength
+        table[i, 4] = table[i, 2] / table[i, 3] # SNR
+        table[i, 5] = layer
         if target_support is not None:
-            # Set table[i,5] to symmetric support difference
-            table[i, 5] = len(np.setdiff1d(te_supp, target_support)) + \
+            # Set table[i,6] to symmetric support difference
+            table[i, 6] = len(np.setdiff1d(te_supp, target_support)) + \
                 len(np.setdiff1d(target_support, te_supp))
-        if table[i, 3] > best_snr:
-            best_snr = table[i, 3]
+        if table[i, 4] > best_snr:
+            best_snr = table[i, 4]
             best_tilingelement = tilingelement
     # Sort table
-    ranking = np.argsort(table[:, 3])
+    ranking = np.argsort(table[:, 4])
     table = table[ranking, :]
     if show_table:
-        header = ["# Active", "c", "d", "SNR", "Layer", "Symmetric Diff"]
+        header = ["Identifier", "# Active", "c", "d", "SNR", "Layer",
+                  "Symmetric Diff"]
         print tabulate(table, headers=header)
     elapsed_time = timer() - starttime
     return table, best_tilingelement, elapsed_time

@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 import numpy as np
 from tabulate import tabulate
 
+from mp_utils import approximate_solve_mp_fixed_support
 from tilingElement import TilingElement
 from tilingVerification import plot_tiling, plot_tiling_graph, verify_tiling
 
@@ -116,12 +117,13 @@ class Tiling(object):
                 uncompleted_children.extend(tmp_uncomp_children)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
+        self.assign_identifiers_to_elements()
         self.elapsed_time_tiling = timer() - starttime_tiling
         print "Finished tiling creation..."
         if self.options.get('print_summary', False):
             tab = self.tabularise_results()
-            print tabulate(tab, headers=["alpha_min", "beta_min", "alpha_max",
-                    "beta_max", "#Supp", "Sym. Dif."])
+            print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
+                    "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
 
     def default_options(self):
         """ Returns a default option setting. Each option that is not overriden
@@ -222,21 +224,23 @@ class Tiling(object):
         """ Method to tabulise the tiling results. Each row belongs to a single
         tiling element and each row contains the following options about a
         specific tiling element:
-        0 - alpha_min : Minimal regularisation parameter alpha for which we can
+        0 - identifier : Integer that uniquely identifies a specific tiling
+                         element of this tiling.
+        1 - alpha_min : Minimal regularisation parameter alpha for which we can
                         reach a specific support.
                         The corresponding beta regularisation parameter is given
                         in the next entry.
-        1 - beta_min : Minimal regularisation parameter beta for which we can
+        2 - beta_min : Minimal regularisation parameter beta for which we can
                        reach a specific support.
-        2 - alpha_max : Maximal regularisation parameter alpha for which we can
+        3 - alpha_max : Maximal regularisation parameter alpha for which we can
                         reach a specific support.
                         The corresponding beta regularisation parameter is given
                         in the next entry.
-        3 - beta_max : Maximal regularisation parameter beta for which we can
+        4 - beta_max : Maximal regularisation parameter beta for which we can
                        reach a specific support.
-        4 - Support size : Support size of the support of a tiling element.
+        5 - Support size : Support size of the support of a tiling element.
         Optional :
-        5 - Symmetric difference : Symmetric difference to a target support
+        6 - Symmetric difference : Symmetric difference to a target support
                                    where the target support is specified is
                                    given by argument 'u_real_for_comparison'.
 
@@ -257,18 +261,19 @@ class Tiling(object):
         tiling_elements = self.root_element.bds_order()
         tiling_elements = list(tiling_elements.iteritems())
         tiling_elements.sort(key=lambda x: (len(x[0].support), x[0].alpha_min))
-        results = np.zeros((len(tiling_elements), 6))
+        results = np.zeros((len(tiling_elements), 7))
         if u_real_for_comparison is not None:
             real_support = np.where(u_real_for_comparison)[0]
         else:
             real_support = np.zeros(self.A.shape[1])
         for (i, (te, layer)) in enumerate(tiling_elements):
-            results[i,0] = te.alpha_min
-            results[i,1] = te.beta_min
-            results[i,2] = te.alpha_max
-            results[i,3] = te.beta_max
-            results[i,4] = len(te.support)
-            results[i,5] = len(np.setdiff1d(te.support, real_support)) + \
+            results[i,0] = te.identifier
+            results[i,1] = te.alpha_min
+            results[i,2] = te.beta_min
+            results[i,3] = te.alpha_max
+            results[i,4] = te.beta_max
+            results[i,5] = len(te.support)
+            results[i,6] = len(np.setdiff1d(te.support, real_support)) + \
                             len(np.setdiff1d(real_support, te.support))
         return results
 
@@ -304,6 +309,30 @@ class Tiling(object):
             The reconstructed tiling.
         """
         verify_tiling(self.root_element)
+
+    def get_solution_to_element(self, identifier):
+        """
+        """
+        te = self.get_tiling_element(identifier)
+        u_I, v_I = approximate_solve_mp_fixed_support(te.support, self.A,
+                                                      self.y)
+        return u_I, v_I
+
+    def get_tiling_element(self, identifier):
+        """
+        """
+        tes_in_bds = self.root_element.bds_order()
+        te = [te for te in tes_in_bds.keys() if te.identifier == identifier][0]
+        return te
+
+    def assign_identifiers_to_elements(self):
+        """
+        """
+        tilingelements_in_bds = self.root_element.bds_order()
+        identifier = 0
+        for element in tilingelements_in_bds.keys():
+            element.identify_as(identifier)
+            identifier += 1
 
 
 

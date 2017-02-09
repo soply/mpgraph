@@ -31,6 +31,7 @@ class TilingElement(object):
         self.svdAAt_U = svdAAt_U
         self.svdAAt_S = svdAAt_S
         self.options = options
+        self.identifier = None
 
     def __repr__(self):
         """ Overwriting the build-in representation method. """
@@ -39,6 +40,9 @@ class TilingElement(object):
                                                  [(self.alpha_min, self.beta_min),
                                                   (self.alpha_max, self.beta_max)])
 
+    def identify_as(self, identifier):
+        self.identifier = identifier
+        
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
