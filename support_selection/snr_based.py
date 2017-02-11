@@ -1,6 +1,4 @@
 # coding: utf8
-from timeit import default_timer as timer
-
 import numpy as np
 from tabulate import tabulate
 
