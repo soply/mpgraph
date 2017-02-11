@@ -58,6 +58,8 @@ def highest_support_constrained_snr(tiling, show_table=False,
     """
     starttime = timer()
     tiling_elements = tiling.root_element.bds_order()
+    # Remove root element
+    del tiling_elements[tiling.root_element]
     if target_support is not None:
         table = np.zeros((len(tiling_elements.keys()), 7))
     else:
@@ -65,9 +67,6 @@ def highest_support_constrained_snr(tiling, show_table=False,
     best_tilingelement = None
     best_snr = 0.0
     for i, (tilingelement, layer) in enumerate(tiling_elements.iteritems()):
-        if layer == 0:
-            # Skip root element
-            continue
         te_supp = tilingelement.support
         u_I, v_I = approximate_solve_mp_fixed_support(te_supp, tiling.A,
                                                       tiling.y)
