@@ -334,6 +334,21 @@ class Tiling(object):
             element.identify_as(identifier)
             identifier += 1
 
+    def intersection_support_per_layer(self):
+        """
+        """
+        tilingelements_in_bds = self.root_element.bds_order()
+        del tilingelements_in_bds[self.root_element] # Remove root element
+        supports = {}
+        for layer in set(tilingelements_in_bds.values()):
+            tes_to_layer = [te for te in tilingelements_in_bds
+                                        if tilingelements_in_bds[te] == layer]
+            current_support = tes_to_layer.pop().support
+            while len(tes_to_layer) > 0:
+                current_support = np.intersect1d(current_support,
+                                                 tes_to_layer.pop().support)
+            supports[layer] = current_support
+        return supports
 
 
 def filter_children_sparsity(children, sparsity_bound):
