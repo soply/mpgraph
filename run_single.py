@@ -124,7 +124,7 @@ def main(argv):
                "<verification> -p <plotting>.\n"
                "<identifier> is an arbitraray folder name.\n"
                "<verification> can be true of false and defines whether or not\n"
-               "the resulting tiling shall be verified (default: false)."
+               "the resulting tiling shall be verified (default: false).\n"
                "<plotting> can be 'graph', 'graph-layered', 'tiling' or 'no' \n"
                "and defines the method of how we display the reconstructed tiling\n"
                "(default: 'no').\n"
@@ -165,29 +165,29 @@ def main(argv):
     problem = {
         'identifier': identifier,
         'tiling_options': tiling_options,
-        'beta_min': 1e-6,
-        'beta_max': 100.0,
-        'upper_bound_tilingcreation': 9,
-        'n_measurements': 350,
+        'beta_min': 1e-1,
+        'beta_max': 10.0,
+        'upper_bound_tilingcreation': 10,
+        'n_measurements': 250,
         'n_features': 1250,
-        'sparsity_level': 8,
+        'sparsity_level': 6,
         'smallest_signal': 1.5,
         'largest_signal': 2.0,
         'noise_type_signal': 'linf_bounded',
-        'noise_lev_signal': 0.3,
+        'noise_lev_signal': 0.2,
         'noise_type_measurements': 'gaussian',
         'noise_lev_measurements': 0.0,
-        'random_seed': 1
+        'random_seed': 12
     }
     tiling, best_tilingelement = run_single(problem)
     if verification:
         tiling.verify_tiling()
     if plotting == 'graph':
-        tiling.plot_tiling_graph()
+        tiling.plot_tiling_graph(y_mode = 'alpha')
     elif plotting == "graph-layered":
-        tiling.plot_tiling_graph(ymode = 'layered')
+        tiling.plot_tiling_graph(y_mode = 'layered')
     elif plotting == "tiling":
-        tiling.plot_tiling()
+        tiling.plot_tiling(n_disc = 7)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

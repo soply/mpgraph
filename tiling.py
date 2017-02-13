@@ -147,11 +147,6 @@ class Tiling(object):
                         in tabularised form to the console. Otherwise, no
                         print-outs will be done at the end.
 
-        Parameters
-        ----------------
-        self : object of class Tiling
-            Current tiling object.
-
         Returns
         ----------------
         Default options settings as a python dictionary.
@@ -170,9 +165,6 @@ class Tiling(object):
 
         Parameters
         ---------------
-        self : object of class Tiling
-            This tiling object
-
         support_size : Integer
             Support size of tiling elements that we want to find in the tiling.
 
@@ -193,9 +185,6 @@ class Tiling(object):
 
         Parameters
         ---------------
-        self : object of class Tiling
-            This tiling object
-
         beta : Positive, real number
             beta for which we want to return the support and sign-pattern path.
             Note that the beta must be satisfy
@@ -246,9 +235,6 @@ class Tiling(object):
 
         Parameters
         --------------
-        self : object of class Tiling
-            This tiling object
-
         u_real_for_comparison (optional) : array, shape (n_features)
             Optional argument to provide a target support that should be used
             for comparison with results contained in the tiling.
@@ -277,36 +263,21 @@ class Tiling(object):
                             len(np.setdiff1d(real_support, te.support))
         return results
 
-    def plot_tiling(self):
+    def plot_tiling(self, n_disc = 3):
         """ Wrapper for plotting the reconstructed tiling. Calls method from
         tilingVerification.py on the root element.
-
-        Parameters
-        --------------
-        self: object of class Tiling
-            The reconstructed tiling.
         """
-        plot_tiling(self.root_element)
+        plot_tiling(self.root_element, n_disc = n_disc)
 
     def plot_tiling_graph(self, y_mode='layered'):
         """ Wrapper for plotting the graph corresponding to a tiling. Calls
         method from tilingVerification.py on the root element.
-
-        Parameters
-        --------------
-        self: object of class Tiling
-            The reconstructed tiling.
         """
         plot_tiling_graph(self.root_element, y_mode)
 
     def verify_tiling(self):
         """ Wrapper for verifying a reconstructed tiling. Calls method from
         tilingVerification.py on the root element.
-
-        Parameters
-        --------------
-        self: object of class Tiling
-            The reconstructed tiling.
         """
         verify_tiling(self.root_element)
 

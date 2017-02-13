@@ -1,11 +1,18 @@
 # coding: utf8
 import operator
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 
 from create_children.lasso_path_utils import calc_all_cand
 from mp_utils import calc_B_y_beta
+
+# Settings for plotting
+font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 22}
+matplotlib.rc('font', **font)
 
 
 def verify_tiling(tilingelement):
@@ -96,19 +103,21 @@ def plot_tiling(tilingelement, n_disc=3):
                                         prev_element.sign_pattern)
             points[i][j, 0] = beta
             points[i][j, 1] = alpha[J]
-            colors[i].append(colorlist[idx % 6])
+            colors[i].append(colorlist[(idx + 2 * i) % 6])
     plt.figure()
     ax = plt.gca()
     plt.title(r'Support tiling $u_{\alpha, \beta}$')
     for i in range(max_layer):
         for j in range(len(points[i]) - 1):
-            plt.plot(points[i][j:j + 2, 0], points[i][j:j + 2, 1],
-                     c=colors[i][j + 1], linewidth=2.0, alpha=0.5)
+            plt.semilogx(points[i][j:j + 2, 0], points[i][j:j + 2, 1],
+                     color = 'k', linewidth=2.0, alpha=0.5)
+                     # or chose c='colors[i][j + 1]' if line colors should match
+                     # the face color of the area
             if i == 0:
                 ax.fill_between(points[i][j:j + 2, 0],
                                 points[i][j:j + 2, 1],
                                 np.max(points[0][:, 1]),
-                                facecolor=colorlist[0],
+                                facecolor=colorlist[-1],
                                 alpha=0.5, linewidth=0.0)
             elif i < max_layer:
                 ax.fill_between(points[i][j:j + 2, 0],
@@ -121,6 +130,7 @@ def plot_tiling(tilingelement, n_disc=3):
                                     points[i][j:j + 2, 1],
                                     facecolor=colors[i][j + 1],
                                     alpha=0.5, linewidth=0.0)
+    plt.ylim(np.min(points[-1][:,1]), np.max(points[1][:,1]))
     plt.xlabel(r'$\beta$')
     plt.ylabel(r'$\alpha$')
     plt.show()
@@ -155,11 +165,16 @@ def plot_tiling_graph(tilingelement, y_mode='layered'):
                     0.5 * (element.alpha_min + element.alpha_max)
             plt.arrow(xstart, ystart, xend, yend, head_width=0.04,
                       head_length=0.075, fc="k", ec="k")
-            plt.annotate("[{0},{1}]".format(child[1], child[2]),
-                         xy=(0.5 * (2 * xstart + xend),
-                             0.5 * (2 * ystart + yend)),
-                         xytext=(0.5 * (2 * xstart + xend),
-                                 0.5 * (2 * ystart + yend)))
+            if y_mode == 'layered':
+                plt.annotate("({0:.2f},{1:.2f})".format(child[1], child[2]),
+                             xy=(0.5 * (2 * xstart + xend),
+                                 0.5 * (2 * ystart + yend)),
+                             xytext=(0.5 * (2 * xstart + xend),
+                                     0.5 * (2 * ystart + yend)))
+                plt.ylabel('Lasso-path steps from root node (*-1)')
+            else:
+                plt.ylabel(r'$\alpha$')
+
     plt.xlabel(r'$\beta$')
     plt.title('Support tiling graph (mode: {0})'.format(y_mode))
     plt.show()
