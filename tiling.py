@@ -99,8 +99,9 @@ class Tiling(object):
                                                       self.options)
         stack = [self.root_element]
         while len(stack) > 0:
-            print "Current stack size: {0}".format(len(stack))
-            print "Minimum support length on stack: {0}".format(
+            if self.options['verbose'] >= 1:
+                print "Current stack size: {0}".format(len(stack))
+                print "Minimum support length on stack: {0}".format(
                                                         len(stack[0].support))
             current_element = stack.pop(0)
             children = current_element.find_children()
@@ -262,6 +263,14 @@ class Tiling(object):
             results[i,6] = len(np.setdiff1d(te.support, real_support)) + \
                             len(np.setdiff1d(real_support, te.support))
         return results
+
+    def show_table(self, u_real_for_comparison = None):
+        """
+        """
+        tab = self.tabularise_results(u_real_for_comparison =
+                                            u_real_for_comparison)
+        print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
+                "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
 
     def plot_tiling(self, n_disc = 3):
         """ Wrapper for plotting the reconstructed tiling. Calls method from

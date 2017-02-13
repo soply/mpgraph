@@ -16,7 +16,7 @@ from mp_utils import calc_B_y_beta
 class TilingElement(object):
 
     def __init__(self, alpha_min, alpha_max, beta_min, beta_max, support,
-                 sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options=None):
+                 sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options):
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
@@ -493,7 +493,6 @@ class TilingElement(object):
         # Reaching the root without finding younger children -> self is node of
         # the leftmost's part of the graph.
         if current_node.oldest_parent() is None:
-            # print "(1) Stopping left search operation on {0}".format(self)
             return None
         # Get parent
         parent = current_node.oldest_parent()
@@ -504,12 +503,9 @@ class TilingElement(object):
                 len(current_node.children) > 0:
             current_node = current_node.youngest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
-            # print "(2) Found left merge partner {0} for {1}".format(current_node,
-            #                                                         self)
             return current_node
 
         else:
-            # print "(3) Stopping left search operation on {0}".format(self)
             return None
 
     def find_right_merge_candidate(self):
@@ -521,7 +517,6 @@ class TilingElement(object):
         # Reaching the root without finding younger children -> self is node of
         # the leftmost's part of the graph.
         if current_node.youngest_parent() is None:
-            # print "(1) Stopping right search operation on {0}".format(self)
             return None
         # Get parent
         parent = current_node.youngest_parent()
@@ -532,12 +527,9 @@ class TilingElement(object):
                 len(current_node.children) > 0:
             current_node = current_node.oldest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
-            # print "(2) Found right merge partner {0} for {1}".format(current_node,
-            #                                                          self)
             return current_node
 
         else:
-            # print "(3) Stopping right search operation on {0}".format(self)
             return None
 
     @staticmethod
@@ -583,9 +575,10 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  children[0].beta_max))
-            print "Merging {0} with {1} and {2}".format(left_candidate,
-                                                        children[0],
-                                                        right_candidate)
+            if children[0].options['verbose'] > 1:
+                print "Merging {0} with {1} and {2}".format(left_candidate,
+                                                            children[0],
+                                                            right_candidate)
             # Case we have searched for left and right candidates of single node
             # Case left_candidate + right_candidate + children node belong
             # to the same tiling element.
@@ -612,8 +605,9 @@ class TilingElement(object):
                 child[0].uniquefy_children()
         else:
             if left_candidate is not None:
-                print "Merging {0} with {1}".format(left_candidate,
-                                                    children[0])
+                if children[0].options['verbose'] > 1:
+                    print "Merging {0} with {1}".format(left_candidate,
+                                                        children[0])
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 left_candidate.alpha_max = children[0].alpha_max
@@ -636,7 +630,8 @@ class TilingElement(object):
             else:
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
-                print "Merging {0} with {1}".format(children[-1],
+                if self.options['verbose'] > 1:
+                    print "Merging {0} with {1}".format(children[-1],
                                                     right_candidate)
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
