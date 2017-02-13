@@ -41,8 +41,17 @@ class TilingElement(object):
                                                   (self.alpha_max, self.beta_max)])
 
     def identify_as(self, identifier):
+        """ Method to add identifier as attribute self.identifier to a particular
+        tilingelement.
+
+        Parameters
+        -----------
+        identifier : Integer number
+            Identifier of tiling element
+        """
+
         self.identifier = identifier
-        
+
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
@@ -104,9 +113,6 @@ class TilingElement(object):
 
         Parameters
         -------------
-        self : object of class TilingElement
-            Current node
-
         beta : Positive, real number with self.beta_min <= beta <= self.beta_max.
 
         Returns
@@ -125,9 +131,6 @@ class TilingElement(object):
 
         Parameters
         -----------
-        self : object of class TilingElement
-            Current node
-
         tilingelement : object of class TilingElement
             Tiling element to compare to.
 
@@ -146,9 +149,6 @@ class TilingElement(object):
 
         Parameters
         -----------
-        self : object of class TilingElement
-            Current tiling element
-
         tilingelement : object of class TilingElement
             Tiling element to compare to.
 
@@ -166,6 +166,38 @@ class TilingElement(object):
 
     def add_child(self, alpha_min, alpha_max, beta_min, beta_max, support,
                   signum):
+        """ Creates a new tiling element from the given arguments and adds it to
+        the list of children of this tiling element. Note that the self node is
+        also automatically assigned as a parent of the newly created node.
+
+        Parameters
+        ------------
+        alpha_min : float
+            Minimum value for regularisation parameter alpha (corresponding
+            to beta_min) to reach the new child.
+
+        alpha_max : float
+            Maximum value for regularisation parameter alpha (corresponding
+            to beta_max) to reach the new child.
+
+        alpha_min : float
+            Minimum value for regularisation parameter beta (corresponding
+            to alpha_min) to reach the new child.
+
+        alpha_max : float
+            Maximum value for regularisation parameter beta (corresponding
+            to alpha_max) to reach the new child.
+
+        support : np.array (shape n_support)
+            Contains the indices corresponding to the support of the new child.
+
+        signum : np.array (shape n_support)
+            {-+1}^n_support representing the sign pattern of the new child.
+
+        Returns
+        ------------
+        An object of class TilingElement that is the newly created child.
+        """
         te = TilingElement(alpha_min, alpha_max, beta_min, beta_max, support,
                            signum, [[self, beta_min, beta_max]], self.A,
                            self.y, self.svdAAt_U, self.svdAAt_S, self.options)
@@ -181,11 +213,6 @@ class TilingElement(object):
         ----------
         Since for each beta there should only be one distinct child element, the
         operation is well defined.
-
-        Parameters
-        ----------
-        self : object of class TilingElement
-            Current tiling element
         """
         self.children.sort(key=lambda x: x[1])
 
@@ -198,11 +225,6 @@ class TilingElement(object):
         ----------
         Since the current node has a distinct parent for each beta in
         [self.beta_min, self.beta_max], the operation is well defined.
-
-        Parameters
-        ----------
-        self : object of class TilingElement
-            Current tiling element
         """
         self.parents.sort(key=lambda x: x[1])
 
@@ -212,12 +234,6 @@ class TilingElement(object):
         Such situations can occur after merging and searching for subsitute
         children via find_children in a part of the actual beta range of this
         node. As such, it can also be called an 'inner-layer' merge operation.
-
-        Parameters
-        ---------------
-        self: object of class TilingElement
-            Tiling element whose children shall be uniquefied by the above
-            mentioned criteria.
 
         Remark
         ---------------
@@ -242,12 +258,6 @@ class TilingElement(object):
         """ Uniquefies the parents of the current tiling element by deleting
         parents that share the same tiling element and connected parameter
         regions.
-
-        Parameters
-        ---------------
-        self: object of class TilingElement
-            Tiling element whose parents shall be uniquefied by the above
-            mentioned criteria.
 
         Remark
         ---------------
@@ -274,9 +284,6 @@ class TilingElement(object):
 
         Parameters
         --------------
-        self: object of class TilingElement
-            Tiling element for which we want to replace a child tiling element.
-
         child_to_replace: object of class TilingElement
             Tiling element that needs to be replaced. Should be available in
             self.children.
@@ -308,9 +315,6 @@ class TilingElement(object):
 
         Parameters
         --------------
-        self: object of class TilingElement
-            Tiling element for which we want to replace a parent tiling element.
-
         parent_to_replace: object of class TilingElement
             Tiling element that needs to be replaced. Should be available in
             self.parents.
@@ -337,38 +341,104 @@ class TilingElement(object):
                                                           replacement))
 
     def oldest_child(self):
+        """ Returns the oldest child of this tiling element. The oldest child
+        is the child that can currently be reached for the smallest beta
+        (self.beta_min if list of children of this element is already complete).
+
+        Returns
+        ---------
+        Object of class tiling element corresponding to the oldest child; or
+        None if this tiling element has to children.
+
+        Remark
+        ----------
+        Assumes the children of this node are sorted (by self.sort_children()).
+        """
         if len(self.children) > 0:
             return self.children[0][0]
         else:
-            # print ("Tiling element: {0}\nNo children but asking for the" +
-            #        " oldest child. ").format(self)
             return None
 
     def youngest_child(self):
+        """ Returns the youngest child of this tiling element. The youngest
+        child is the child that can currently be reached for the largest beta
+        (self.beta_max if list of children of this element is already complete).
+
+        Returns
+        ---------
+        Object of class tiling element corresponding to the youngest child; or
+        None if this tiling element has no children.
+
+        Remark
+        ----------
+        Assumes the children of this node are sorted (by self.sort_children()).
+        """
         if len(self.children) > 0:
             return self.children[-1][0]
         else:
-            # print ("Tiling element: {0}\nNo children but asking for the" +
-            #        " youngest child. ").format(self)
             return None
 
     def oldest_parent(self):
+        """ Returns the oldest parent of this tiling element. The oldest parent
+        is the parent that can currently be reached for the smallest beta
+        (self.beta_min if list of parents of this element is already complete).
+
+        Returns
+        ---------
+        Object of class tiling element corresponding to the oldest parent; or
+        None if this tiling element has no parents (only root node).
+
+        Remark
+        ----------
+        Assumes the parents of this node are sorted (by self.sort_parents()).
+        """
         if self.parents is not None and len(self.parents) > 0:
             return self.parents[0][0]
         else:
-            # print ("Tiling element: {0}\nNo parent but asking for the oldest" +
-            #        " parent. ").format(self)
             return None
 
     def youngest_parent(self):
+        """ Returns the youngest parent of this tiling element. The youngest
+        parent is the parent that can currently be reached for the largest beta
+        (self.beta_max if list of parents of this element is already complete).
+
+        Returns
+        ---------
+        Object of class tiling element corresponding to the youngest parent; or
+        None if this tiling element has no parents (only root node).
+
+        Remark
+        ----------
+        Assumes the parents of this node are sorted (by self.sort_parents()).
+        """
         if self.parents is not None and len(self.parents) > 0:
             return self.parents[-1][0]
         else:
-            # print ("Tiling element: {0}\nNo parent but asking for the" +
-            #        " oldest parent. ").format(self)
             return None
 
     def find_next_older_neighbor(self, child):
+        """ Returns the next older neighbor of the given child outgoing from the
+        parent that is given by self. The next older neighbor is defined as the
+        tiling element that can be reached from the succeeding beta region of
+        the childrens beta region.
+
+        Parameters
+        ---------
+        child : python object of class TilingElement
+            Child to which we search the next older neighbor, outgoing from
+            the shared parent self.
+
+        Returns
+        ---------
+        Object of class TilingElement that is the next older neighbor; or throws
+        a RuntimeError if no suceeding neighbor of child in the children of self
+        was found.
+
+        Remark
+        ----------
+        -Assumes the children of self are sorted (by self.sort_children()).
+        -Throws exception in case of failure.
+        """
         ctr = 1
         n_children = len(self.children)
         while ctr < n_children:
@@ -377,9 +447,32 @@ class TilingElement(object):
             ctr = ctr + 1
         else:
             raise RuntimeError(("Could not find next older neighbor of " +
-                                "{0} in children of node {1}.").format(child, self))
+                                "{0} in children of node {1}.").format(child,
+                                                                       self))
 
     def find_next_younger_neighbor(self, child):
+        """ Returns the next younger neighbor of the given child outgoing from
+        the parent that is given by self. The next younger neighbor is defined
+        as the tiling element that can be reached from the preceding beta
+        region of the childrens beta region.
+
+        Parameters
+        ---------
+        child : python object of class TilingElement
+            Child to which we search the next younger neighbor, outgoing from
+            the shared parent self.
+
+        Returns
+        ---------
+        Object of class TilingElement that is the next younger neighbor; or
+        throws a RuntimeError if no preceding neighbor of child in the children
+        of self was found.
+
+        Remark
+        ----------
+        -Assumes the children of self are sorted (by self.sort_children()).
+        -Throws exception in case of failure.
+        """
         ctr = 0
         n_children = len(self.children)
         while ctr + 1 < n_children:
@@ -388,7 +481,8 @@ class TilingElement(object):
             ctr = ctr + 1
         else:
             raise RuntimeError(("Could not find next younger neighbor of " +
-                                "{0} in children of node {1}.").format(child, self))
+                                "{0} in children of node {1}.").format(child,
+                                                                       self))
 
     def find_left_merge_candidate(self):
         assert len(self.children) == 0 and len(self.parents) == 1
@@ -571,12 +665,61 @@ class TilingElement(object):
 
     @staticmethod
     def base_region(beta_min, beta_max, A, y, svdU, svdS, options):
+        """ Creates and returns the root tiling element object. Note that alpha
+        min and alpha max are initialised randomly with 100, but this is not
+        influential to the results of the algorithm.
+
+        Parameters
+        ------------
+        beta_min : float
+            Minimal beta of root_element, specifies the minimum of all betas
+            considered in a following tiling creation.
+
+        beta_max : float
+            Maximal beta of root_element, specifies the maximum of all betas
+            considered in a following tiling creation.
+
+        A : array, shape (n_measurements, n_features)
+            The sensing/sampling matrix A.
+
+        y : array, shape (n_measurements)
+            The vector of measurements
+
+        svdU : array, shape (n_measurements, n_measurements)
+            Matrix U of the singular value decomposition of A*A^T.
+
+        svdS : array, shape (n_measurements)
+            Array S with singular values of singular value decomposition of A*A^T.
+
+        options : python dict objects
+            Specifies the options for the run. See constructor to see which
+            options can be specified.
+
+        Returns
+        ------------
+        Object of class TilingElement that serves as a root object, ie. has
+        empty support and sign pattern, dummy initialised alpha_min and
+        alpha_max, and the user-specified beta_range as its parameters.
+        """
         return TilingElement(100.0, 100.0, beta_min, beta_max,
                              np.array([]).astype("uint32"),
                              np.array([]).astype("int32"), None, A, y, svdU,
                              svdS, options)
 
     def bds_order(self):
+        """ Traverses through the whole graph, starting from this current node,
+        in a breadth-deep-search type manner. While doing that, stores all
+        tiling elements that can be found as keys of a python dictionary and
+        assigns as a corresponding value the layer. This integer defines how
+        many Lasso path steps from the given tiling element are (at least!)
+        necessary to reach the respective tiling element in keys().
+
+        Returns
+        ----------
+        python dict object with tiling elements as keys and the corresponding
+        minimally necessary number of Lasso path steps to reach it from the
+        given source node (self) as the value.
+        """
         elements_in_bds_order = {self: 0}
         element_queue = [self]
         while len(element_queue) > 0:
