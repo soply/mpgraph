@@ -576,9 +576,9 @@ class TilingElement(object):
                                                  children[0].beta_min,
                                                  children[0].beta_max))
             if children[0].options['verbose'] > 1:
-                print "Merging {0} with {1} and {2}".format(left_candidate,
-                                                            children[0],
-                                                            right_candidate)
+                print "Merging both{0} with {1} and {2}".format(left_candidate,
+                                                                children[0],
+                                                                right_candidate)
             # Case we have searched for left and right candidates of single node
             # Case left_candidate + right_candidate + children node belong
             # to the same tiling element.
@@ -606,8 +606,8 @@ class TilingElement(object):
         else:
             if left_candidate is not None:
                 if children[0].options['verbose'] > 1:
-                    print "Merging {0} with {1}".format(left_candidate,
-                                                        children[0])
+                    print "Merging left {0} with {1}".format(left_candidate,
+                                                             children[0])
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 left_candidate.alpha_max = children[0].alpha_max
@@ -631,8 +631,8 @@ class TilingElement(object):
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
                 if self.options['verbose'] > 1:
-                    print "Merging {0} with {1}".format(children[-1],
-                                                    right_candidate)
+                    print "Merging right {0} with {1}".format(children[-1],
+                                                              right_candidate)
                 # Case left_candidate + right_candidate + children node belong
                 # to the same tiling element.
                 right_candidate.alpha_min = children[-1].alpha_min
