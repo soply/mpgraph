@@ -125,11 +125,14 @@ def plot_tiling(tilingelement, n_disc=3):
                                 points[i - 1][j:j + 2, 1],
                                 facecolor=colors[i - 1][j + 1],
                                 alpha=0.5, linewidth=0.0)
-                if i == max_layer - 1:
-                    ax.fill_between(points[i][j:j + 2, 0], 0,
-                                    points[i][j:j + 2, 1],
-                                    facecolor=colors[i][j + 1],
-                                    alpha=0.5, linewidth=0.0)
+                # To cover the last areas that close with the horizontal axis,
+                # use the following code (may provide misleading information
+                # though if wrongly interpreted):
+                # if i == max_layer - 1:
+                #     ax.fill_between(points[i][j:j + 2, 0], 0,
+                #                     points[i][j:j + 2, 1],
+                #                     facecolor=colors[i][j + 1],
+                #                     alpha=0.5, linewidth=0.0)
     plt.ylim(np.min(points[-1][:,1]), np.max(points[1][:,1]))
     plt.xlabel(r'$\beta$')
     plt.ylabel(r'$\alpha$')
