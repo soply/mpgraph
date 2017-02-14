@@ -17,8 +17,10 @@ def test_graph_operations(testcase):
     A, y, svdU, svdS = tgo.create_dummy_variables()
     base_region = region_iterator.next()[0]
     options = {
+        "verbose" : 2,
         "mode" : "TEST",
-        "test_iterator": region_iterator
+        "test_iterator": region_iterator,
+        "env_minimiser": "scipy_brentq"
     }
     stack = []
     root_element = TilingElement(base_region[0][0], base_region[1][0],
@@ -41,10 +43,9 @@ def test_graph_operations(testcase):
                 uncompleted_children.extend(tmp_uncomp_children)
                 stack.extend(children_for_stack)
         except StopIteration:
-            print "Verification: ", root_element.verify_tiling()
-            root_element.plot_graph()
             import pdb
             pdb.set_trace()
+
 if __name__ == "__main__":
     testcase = "TC6"
     test_graph_operations(testcase)

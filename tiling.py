@@ -68,7 +68,34 @@ class Tiling(object):
     """ Doc string """
 
     def __init__(self, A, y, prior=None, options=None):
-        """ Contructor doc string """
+        """ Constructor for Tiling class.
+
+        Parameters
+        -----------
+        A : array, shape (n_measurements, n_features)
+            Measurement matrix in A(u+v) = y
+
+        y : array, shape (n_measurements)
+            Measurement vector in A(u+v) = y.
+
+        prior : array, shape (n_features)
+            Prior information on the noise/disturbance vector v. If prior is given
+            the problem
+                1/2||A(u+v)-(y-A*prior)||_2^2+alpha*||u||_1+beta/2*||v-prior||_2^2
+            is solved.
+
+        options : dict, keys ...
+            Dictionary specifying the options that are passed to the Tiling object.
+            Check default_options method of tiling object to check what options can
+            be set.
+
+        Remarks
+        -----------
+        Note that the constructor directly performs an SVD for A*A.T and thus
+        might need some time to finish. This however has to be done since the
+        respective decomposition is used heavily in the following tiling
+        creation.
+        """
         if options is None:
             options = self.default_options()
         else:
@@ -89,6 +116,87 @@ class Tiling(object):
         self.root_element = None
 
     def create_tiling(self, beta_min, beta_max, n_sparsity, options=None):
+        """ Main method of this object class that is called to run the tiling
+        creation. It takes as arguments the corridor of parameters [beta_min,
+        beta_max] that we want to consider, as well as the maximum number of
+        Lasso steps from the root step n_sparsity. As a remark we should notice
+        that this does not mean that all supports of size n_sparsity are found
+        in general, but only if the 'LARS' mode is used. This is because
+        other modes like 'LASSO' allow dropping entries from the support.
+
+        Methodology
+        -------------
+        The tiling is built up iteratively by starting with the trivial root
+        element of empty support only in a stack, and then successively finding
+        children for the oldest tiling element that is on the stack. Moreover,
+        merging operations and intermediate children searches have to be
+        performed to ensure the validity of the tiling (and to have functioning
+        merging). Concretely, if we take the stack of non-processed tiles
+        as s, the following steps are performed:
+
+        1) Take the oldest of these tiles (at position 0).
+
+        2) Since it has not been processed before, search for the children
+           of this tile in the current assigned beta-range (the range from
+           which we can reach the tile itself).
+
+        3) Perform a merging operation on these children:
+            -The oldest child (at position 0) can be merged to the left.
+            If this happens, the merging partner might become an uncompleted
+            child which means that it has been processed before, but needs
+            to be processed again in a specific range of beta's because the
+            merging operation extended the beta range of this node.
+            -The youngest child (at position -1) can be merged to the right.
+            If this happens, the merging partner can also become an
+            uncompleted child that needs reprocessing in a certain beta
+            range.
+            -Remark: If only 1 child has been found, it could happen that it
+            needs to be merged to the right and to the left!
+
+        4) Now maybe have uncompleted children to process on the respective
+        extended beta regions before we can continue with 1) on the next
+        oldest node. That's what the while-loop is for:
+            While we still have uncompleted children:
+                1) Take and remove an uncompleted children and search for
+                its children in the extended beta range (that has been added
+                to what has been processed before due to merging).
+                2) Try to merge these children as explained in 3) and
+                extend the list of uncompleted children if such children
+                have been created due to mergings.
+
+        After this loop has finished, the tiling is again in a state where
+        each tile either has been processed 'completely' in the sense that
+        it is not uncompleted, respectively that all successors/children for
+        its currently assigned beta range from which a tile can be reached
+        are found; or if this is not the case, it is completely unprocessed
+        and is still on the original stack, hence will be processed later.
+
+        5) Return to 1) if there are stacks left in the original stack;
+        otherwise, the algorithm is finished.
+
+        Parameters
+        ---------------
+        beta_min : float
+            Specifies the minimum for the regularisation parameter beta.
+
+        beta_max : float
+            Specifies the maximum for the regularisation parameter beta.
+
+        n_sparsity :
+            Maximum number of Lasso-path steps from root node considered, that
+            is equivalent to the maximum support size of u if a mode is chosen
+            where indices can not be dropped (e.g. 'LARS').
+
+        options : python dict
+            If options from construction of this element shall be overriden,
+            this can be done by passing this argument. Should have same keys,
+            vals as explained in the default_options method.
+
+        Remark
+        ---------------
+        More information on the algorithm can be found in the paper ... or in
+        the comments on sub methods of the code.
+        """
         # Override options if desired
         if options is not None:
             self.options = dict(self.options.items() + options.items())
@@ -111,8 +219,8 @@ class Tiling(object):
             stack.extend(list(filter_children_sparsity(children_for_stack,
                                                        n_sparsity)))
             while len(uncompleted_children) > 0:
-                uncomp_child, beta_min, beta_max = uncompleted_children.pop(0)
-                children = uncomp_child.find_children(beta_min, beta_max)
+                uncomp_child, uc_b_min, uc_b_max = uncompleted_children.pop(0)
+                children = uncomp_child.find_children(uc_b_min, uc_b_max)
                 tmp_uncomp_children, children_for_stack = \
                     TilingElement.merge_new_children(children)
                 uncompleted_children.extend(tmp_uncomp_children)
@@ -314,7 +422,7 @@ class Tiling(object):
         -----------
         Returns tuple (u_I, v_I) where u_I is the least squares regression on
         the fixed support (wo regularisation) and v_I is the least squares
-        regression of the discrepancy (wo regularisation).        
+        regression of the discrepancy (wo regularisation).
         """
         te = self.get_tiling_element(identifier)
         u_I, v_I = approximate_solve_mp_fixed_support(te.support, self.A,
