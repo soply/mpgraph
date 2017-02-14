@@ -106,7 +106,7 @@ def plot_tiling(tilingelement, n_disc=3):
             colors[i].append(colorlist[(idx + 2 * i) % 6])
     plt.figure()
     ax = plt.gca()
-    plt.title(r'Support tiling $u_{\alpha, \beta}$')
+    plt.title(r'Support tiling $u_{\beta, \alpha}$')
     for i in range(max_layer):
         for j in range(len(points[i]) - 1):
             plt.semilogx(points[i][j:j + 2, 0], points[i][j:j + 2, 1],
