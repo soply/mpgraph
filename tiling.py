@@ -265,7 +265,14 @@ class Tiling(object):
         return results
 
     def show_table(self, u_real_for_comparison = None):
-        """
+        """ Show the summary table after creating the tiling. Can be given the
+        real solution to compare and see symmetric differences.
+
+        Parameters
+        ------------
+        u_real_for_comparison : np.array, shape (n_features)
+            The signal that was used in generating the problem data (or
+            something else to compare the found collected to).
         """
         tab = self.tabularise_results(u_real_for_comparison =
                                             u_real_for_comparison)
@@ -291,7 +298,23 @@ class Tiling(object):
         verify_tiling(self.root_element)
 
     def get_solution_to_element(self, identifier):
-        """
+        """ Retrieve the solution to a specific tiling element, specified by its
+        identifier, where the solution is calculated via a least-squares
+        regression on the respective fixed support without additional
+        regularization. Note that, if there is a lot of measurement noise on y
+        that is not covered by v, the resulting u_I does fit this measurement
+        noise and hence maybe not useful.
+
+        Parameters
+        ------------
+        identifier : Integer
+            Identifier of the tile.
+
+        Returns
+        -----------
+        Returns tuple (u_I, v_I) where u_I is the least squares regression on
+        the fixed support (wo regularisation) and v_I is the least squares
+        regression of the discrepancy (wo regularisation).        
         """
         te = self.get_tiling_element(identifier)
         u_I, v_I = approximate_solve_mp_fixed_support(te.support, self.A,
@@ -299,14 +322,26 @@ class Tiling(object):
         return u_I, v_I
 
     def get_tiling_element(self, identifier):
-        """
+        """ Retrieve a specific tiling element by the identifier (listed in
+        summary tables).
+
+        Parameters
+        ------------
+        identifier : Integer
+            Identifier of the tile.
+
+        Returns
+        ------------
+        Object of class TilingElement.
         """
         tes_in_bds = self.root_element.bds_order()
         te = [te for te in tes_in_bds.keys() if te.identifier == identifier][0]
         return te
 
     def assign_identifiers_to_elements(self):
-        """
+        """ Assigns unique identifiers to all tiling elements that belong to
+        this tile. The order/number itself does not have any meaning, it is
+        just important to distinguish and retrieve them.
         """
         tilingelements_in_bds = self.root_element.bds_order()
         identifier = 0
@@ -315,7 +350,17 @@ class Tiling(object):
             identifier += 1
 
     def intersection_support_per_layer(self):
-        """
+        """ Performs a BDS search of the whole tiling, giving all tiling
+        elements as well as the minimal number of find_children steps to reach
+        these tilings. The latter number is considered as the layer. Then
+        a dictionary with keys() given as all possible layers and the
+        corresponding value is the intersection of all supports that belong to
+        a specific layer.
+
+        Returns
+        ------------
+        python dict object with different layers as keys and corresponding
+        intersected supports as values.
         """
         tilingelements_in_bds = self.root_element.bds_order()
         del tilingelements_in_bds[self.root_element] # Remove root element
