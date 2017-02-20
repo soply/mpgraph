@@ -52,6 +52,13 @@ class TilingElement(object):
 
         self.identifier = identifier
 
+    def get_root(self):
+        """ Returns the root node of the tiling this element belongs to."""
+        curr_node = self
+        while curr_node.parents is not None:
+            curr_node = curr_node.parents[0][0]
+        return curr_node
+
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
@@ -533,7 +540,7 @@ class TilingElement(object):
             return None
 
     @staticmethod
-    def merge_new_children(children):
+    def merge_new_children(children, stack):
         """ The beta ranges corresponding to the given children should be
         connected. Do not input only first and last children of a recently
         analysed node but all the children that have been found."""
@@ -566,6 +573,9 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  right_candidate.beta_max))
+                    # Since we want to erase the right node completely, we also
+                    # have to remove it from the current stack.
+                    stack.remove(right_candidate)
                 else:
                     # Remark: The left candidate will be the surviving one with
                     # the correct relations, hence we need to append the left
@@ -576,7 +586,7 @@ class TilingElement(object):
                                                  children[0].beta_min,
                                                  children[0].beta_max))
             if children[0].options['verbose'] > 1:
-                print "Merging both{0} with {1} and {2}".format(left_candidate,
+                print "Merging both {0} with {1} and {2}".format(left_candidate,
                                                                 children[0],
                                                                 right_candidate)
             # Case we have searched for left and right candidates of single node
@@ -630,7 +640,7 @@ class TilingElement(object):
             else:
                 children_for_stack.insert(0, children[0])
             if right_candidate is not None:
-                if self.options['verbose'] > 1:
+                if children[0].options['verbose'] > 1:
                     print "Merging right {0} with {1}".format(children[-1],
                                                               right_candidate)
                 # Case left_candidate + right_candidate + children node belong

@@ -209,23 +209,22 @@ class Tiling(object):
         while len(stack) > 0:
             if self.options['verbose'] >= 1:
                 print "Current stack size: {0}".format(len(stack))
-                print "Minimum support length on stack: {0}".format(
+                print "Support size of first element on stack: {0}".format(
                                                         len(stack[0].support))
             current_element = stack.pop(0)
             children = current_element.find_children()
             uncompleted_children, children_for_stack = \
-                TilingElement.merge_new_children(children)
-
+                TilingElement.merge_new_children(children, stack)
             stack.extend(list(filter_children_sparsity(children_for_stack,
                                                        n_sparsity)))
             while len(uncompleted_children) > 0:
                 uncomp_child, uc_b_min, uc_b_max = uncompleted_children.pop(0)
                 children = uncomp_child.find_children(uc_b_min, uc_b_max)
                 tmp_uncomp_children, children_for_stack = \
-                    TilingElement.merge_new_children(children)
-                uncompleted_children.extend(tmp_uncomp_children)
+                    TilingElement.merge_new_children(children, stack)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
+                uncompleted_children.extend(tmp_uncomp_children)
         self.assign_identifiers_to_elements()
         self.elapsed_time_tiling = timer() - starttime_tiling
         print "Finished tiling creation..."
