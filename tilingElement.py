@@ -566,6 +566,9 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  left_candidate.beta_min,
                                                  children[0].beta_max))
+                    # Remove left candidate from the stack since it will be
+                    # handled in the uncompleted_children loop
+                    stack.remove(left_candidate)
                 elif len(right_candidate.children) == 0:
                     # Remark: The left candidate will be the surviving one with
                     # the correct relations, hence we need to append the left
@@ -573,8 +576,8 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  right_candidate.beta_max))
-                    # Since we want to erase the right node completely, we also
-                    # have to remove it from the current stack.
+                    # Remove right candidate from the stack since it will be
+                    # handled in the uncompleted_children loop
                     stack.remove(right_candidate)
                 else:
                     # Remark: The left candidate will be the surviving one with
