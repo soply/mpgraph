@@ -9,6 +9,7 @@ import numpy as np
 from problem_factory.synthetic_random_data import \
     create_specific_problem_data_from_problem
 from support_selection.snr_based import highest_support_constrained_snr
+from support_selection.layer_based import largest_support_occuring_in_each_layer
 from tiling import wrapper_create_tiling
 
 
@@ -108,14 +109,14 @@ def run_numerous_one_constellation(problem, results_prefix = None):
             elapsed_time = elapsed_time_svd + elapsed_time_tiling + \
                 elapsed_time_selection
             # Flag signalising whether or not a the tiling contains the 'real support'
-            tiling_contains_real = (len(np.where(ranking[:, 5] == 0)[0]) > 0)
+            tiling_contains_real = (len(np.where(ranking[:, 6] == 0)[0]) > 0)
             # Flag signalising whether correct support is connected to the highest
             # ranked tiling element
-            highest_ranked_is_real = (ranking[-1, 5] == 0)
+            highest_ranked_is_real = (ranking[-1, 6] == 0)
             np.savez_compressed(resultdir + str(i) + "_data.npz",
                                 tabularised_results=tab,
                                 elapsed_time=elapsed_time,
-                                symmetric_difference=ranking[-1, 5],
+                                symmetric_difference=ranking[-1, 6],
                                 support=best_tilingelement.support,
                                 tiling_contains_real=tiling_contains_real,
                                 highest_ranked_is_real=highest_ranked_is_real)
@@ -245,27 +246,27 @@ def main(argv):
             identifier)
 
         tiling_options = {
-            'verbose': 1,
-            'mode': 'LARS',
+            'verbose': 2,
+            'mode': 'LASSO',
             'print_summary' : False
         }
         problem = {
             'identifier': identifier,
             'tiling_options': tiling_options,
-            'num_tests': 20,
-            'beta_min': 1e-6,
-            'beta_max': 100.0,
-            'upper_bound_tilingcreation': 9,
-            'n_measurements': 350,
-            'n_features': 1250,
-            'sparsity_level': 8,
+            'num_tests': 100,
+            'beta_min': 1e-06,
+            'beta_max': 100,
+            'upper_bound_tilingcreation': 24,
+            'n_measurements': 250,
+            'n_features': 800,
+            'sparsity_level': 15,
             'smallest_signal': 1.5,
             'largest_signal': 2.0,
             'noise_type_signal': 'linf_bounded',
-            'noise_lev_signal': 0.3,
+            'noise_lev_signal': 0.05,
             'noise_type_measurements': 'gaussian',
             'noise_lev_measurements': 0.0,
-            'random_seed': 1
+            'random_seed': 1223445
         }
         run_numerous_one_constellation(problem)
     elif task == 'show':

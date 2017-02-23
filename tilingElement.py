@@ -1,7 +1,4 @@
 # coding: utf8
-from itertools import groupby
-
-import matplotlib.pyplot as plt
 import numpy as np
 
 from create_children.create_children_lars import (create_children_lars,
@@ -9,9 +6,6 @@ from create_children.create_children_lars import (create_children_lars,
 from create_children.create_children_lasso import (create_children_lasso,
                                                    lasso_children_merge,
                                                    lasso_post_process_children)
-from create_children.lasso_path_utils import calc_all_cand
-from mp_utils import calc_B_y_beta
-
 
 class TilingElement(object):
 
@@ -492,6 +486,27 @@ class TilingElement(object):
                                                                        self))
 
     def find_left_merge_candidate(self):
+        """ Method to find a left merging candidate for the given tiling element
+        in the related tiling. Left hereby means that the minimal parameters of
+        self should be equal to the maximal parameters of the merging candidate.
+
+        The procedure works as follows:
+
+            1) Follow the oldest parent path in the tiling as long as the
+            parent's oldest child equals respective source node. If a parent
+            with an older child can be found, save this parent and the
+            next older neighbor of the source node. Otherwise return None.
+
+            2) From the next older neighbor of the respective source node, trace
+            the youngest child path until we can merge a tiling element with the
+            self node. If none can be found return Null, otherwise return the
+            merging partner.
+
+        Returns
+        -------------
+        If a merging partner could be found, this tiling element is returned as
+        a python object of class TilingElement. Otherwise it returns None.
+        """
         assert len(self.children) == 0 and len(self.parents) == 1
         current_node = self
         while current_node.oldest_parent() is not None and \
@@ -511,11 +526,31 @@ class TilingElement(object):
             current_node = current_node.youngest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
             return current_node
-
         else:
             return None
 
     def find_right_merge_candidate(self):
+        """ Method to find a right merging candidate for the given tiling element
+        in the related tiling. Right hereby means that the maximal parameters of
+        self should be equal to the minimal parameters of the merging candidate.
+
+        The procedure works as follows:
+
+            1) Follow the youngest parent path in the tiling as long as the
+            parent's youngest child equals respective source node. If a parent
+            with a younger child can be found, save this parent and the
+            next younger neighbor of the source node. Otherwise return None.
+
+            2) From the next younger neighbor of the respective source node,
+            trace the oldest child path until we can merge a tiling element
+            with the self node. If none can be found return Null, otherwise
+            return the merging partner.
+
+        Returns
+        -------------
+        If a merging partner could be found, this tiling element is returned as
+        a python object of class TilingElement. Otherwise it returns None.
+        """
         assert len(self.children) == 0 and len(self.parents) == 1
         current_node = self
         while current_node.youngest_parent() is not None and \
@@ -535,7 +570,6 @@ class TilingElement(object):
             current_node = current_node.oldest_child()
         if current_node is not None and current_node.can_be_merged_with(self):
             return current_node
-
         else:
             return None
 
@@ -550,7 +584,6 @@ class TilingElement(object):
         left_candidate = children[0].find_left_merge_candidate()
         right_candidate = children[-1].find_right_merge_candidate()
         uncompleted_children = []
-        children_for_stack = children[1:-1]  # Every element except first and last
         if len(children) == 1 and left_candidate is not None and \
                 right_candidate is not None:
             # This is a special case since left and right candidate belong
@@ -588,11 +621,15 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  children[0].beta_max))
+            else:
+                # Case both candidates are still on the stack. Since only the left
+                # candidate will remain, we remove the right_candidate from the
+                # stack.
+                stack.remove(right_candidate)
             if children[0].options['verbose'] > 1:
                 print "Merging both {0} with {1} and {2}".format(left_candidate,
                                                                 children[0],
                                                                 right_candidate)
-            # Case we have searched for left and right candidates of single node
             # Case left_candidate + right_candidate + children node belong
             # to the same tiling element.
             left_candidate.alpha_max = right_candidate.alpha_max
@@ -616,12 +653,15 @@ class TilingElement(object):
                 child[0].replace_parent(right_candidate, left_candidate)
                 child[0].sort_parents()
                 child[0].uniquefy_children()
+            # Remove child from children list, since it will be processed
+            # immediately
+            del children[0]
         else:
             if left_candidate is not None:
                 if children[0].options['verbose'] > 1:
                     print "Merging left {0} with {1}".format(left_candidate,
                                                              children[0])
-                # Case left_candidate + right_candidate + children node belong
+                # Case left_candidate + children node belong
                 # to the same tiling element.
                 left_candidate.alpha_max = children[0].alpha_max
                 left_candidate.beta_max = children[0].beta_max
@@ -640,13 +680,15 @@ class TilingElement(object):
                     uncompleted_children.append((left_candidate,
                                                  children[0].beta_min,
                                                  children[0].beta_max))
-            else:
-                children_for_stack.insert(0, children[0])
+                # Remove child from children list, since it will either be processed
+                # immediately (if left_candidate had children) or later due to the
+                # enlarged left_candidate range.
+                del children[0]
             if right_candidate is not None:
                 if children[0].options['verbose'] > 1:
                     print "Merging right {0} with {1}".format(children[-1],
                                                               right_candidate)
-                # Case left_candidate + right_candidate + children node belong
+                # Case right_candidate + children node belong
                 # to the same tiling element.
                 right_candidate.alpha_min = children[-1].alpha_min
                 right_candidate.beta_min = children[-1].beta_min
@@ -665,11 +707,12 @@ class TilingElement(object):
                     uncompleted_children.append((right_candidate,
                                                  children[-1].beta_min,
                                                  children[-1].beta_max))
-            elif len(children) > 1:
-                # If len(children) == 1 it is already on the stack if it
-                # corresponding candidates were None
-                children_for_stack.insert(len(children_for_stack), children[-1])
-        return uncompleted_children, children_for_stack
+                # Remove child from children list, since it will either be processed
+                # immediately (if right_candidate had children) or later due to the
+                # enlarged right_candidate range.
+                del children[-1]
+        return uncompleted_children, children
+
 
     @staticmethod
     def base_region(beta_min, beta_max, A, y, svdU, svdS, options):

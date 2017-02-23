@@ -158,26 +158,26 @@ def main(argv):
     print "Running single simulation. Results will be stored in folder {0}".format(
         identifier)
     tiling_options = {
-        'verbose': 1,
-        'mode': 'LARS',
+        'verbose': 2,
+        'mode': 'LASSO',
         'print_summary' : True
     }
     problem = {
         'identifier': identifier,
         'tiling_options': tiling_options,
         'beta_min': 1e-1,
-        'beta_max': 10.0,
-        'upper_bound_tilingcreation': 10,
+        'beta_max': 100.0,
+        'upper_bound_tilingcreation': 25,
         'n_measurements': 250,
         'n_features': 1250,
-        'sparsity_level': 6,
+        'sparsity_level': 10,
         'smallest_signal': 1.5,
         'largest_signal': 2.0,
         'noise_type_signal': 'linf_bounded',
         'noise_lev_signal': 0.2,
         'noise_type_measurements': 'gaussian',
         'noise_lev_measurements': 0.0,
-        'random_seed': 12
+        'random_seed': 123456
     }
     tiling, best_tilingelement = run_single(problem)
     if verification:
