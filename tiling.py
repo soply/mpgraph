@@ -218,8 +218,6 @@ class Tiling(object):
                 TilingElement.merge_new_children(children, stack)
             stack.extend(list(filter_children_sparsity(children_for_stack,
                                                        n_sparsity)))
-            # uncompleted_children = merge_new_children_faster(children, stack,
-            #                                                 n_sparsity)
             while len(uncompleted_children) > 0:
                 uncomp_child, uc_b_min, uc_b_max = uncompleted_children.pop(0)
                 children = uncomp_child.find_children(uc_b_min, uc_b_max)
@@ -227,8 +225,6 @@ class Tiling(object):
                     TilingElement.merge_new_children(children, stack)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
-                # tmp_uncomp_children = merge_new_children_faster(children, stack,
-                #                                                 n_sparsity)
                 uncompleted_children.extend(tmp_uncomp_children)
         self.assign_identifiers_to_elements()
         self.elapsed_time_tiling = timer() - starttime_tiling
