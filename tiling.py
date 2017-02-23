@@ -7,6 +7,7 @@ from tabulate import tabulate
 
 from mp_utils import approximate_solve_mp_fixed_support
 from tilingElement import TilingElement
+from tilingMerging import merge_new_children_faster, merge_new_children_simple
 from tilingVerification import plot_tiling, plot_tiling_graph, verify_tiling
 
 
@@ -217,6 +218,8 @@ class Tiling(object):
                 TilingElement.merge_new_children(children, stack)
             stack.extend(list(filter_children_sparsity(children_for_stack,
                                                        n_sparsity)))
+            # uncompleted_children = merge_new_children_faster(children, stack,
+            #                                                 n_sparsity)
             while len(uncompleted_children) > 0:
                 uncomp_child, uc_b_min, uc_b_max = uncompleted_children.pop(0)
                 children = uncomp_child.find_children(uc_b_min, uc_b_max)
@@ -224,6 +227,8 @@ class Tiling(object):
                     TilingElement.merge_new_children(children, stack)
                 stack.extend(list(filter_children_sparsity(children_for_stack,
                                                            n_sparsity)))
+                # tmp_uncomp_children = merge_new_children_faster(children, stack,
+                #                                                 n_sparsity)
                 uncompleted_children.extend(tmp_uncomp_children)
         self.assign_identifiers_to_elements()
         self.elapsed_time_tiling = timer() - starttime_tiling
@@ -232,6 +237,36 @@ class Tiling(object):
             tab = self.tabularise_results()
             print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
                     "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
+
+
+    def create_tiling_simple(self, beta_min, beta_max, n_sparsity, options=None):
+        """ADD DOC"""
+        # Override options if desired
+        if options is not None:
+            self.options = dict(self.options.items() + options.items())
+        print "Beginning tiling creation..."
+        starttime_tiling = timer()
+        self.root_element = TilingElement.base_region(beta_min, beta_max, self.A,
+                                                      self.y, self.svdU, self.svdS,
+                                                      self.options)
+        stack = [(self.root_element, beta_min, beta_max)]
+        while len(stack) > 0:
+            if self.options['verbose'] >= 1:
+                print "Current stack size: {0}".format(len(stack))
+                print "Minimum support length on stack: {0}".format(
+                                                        len(stack[0][0].support))
+            current_element, ce_beta_min, ce_beta_max = stack.pop(0)
+            children = current_element.find_children(ce_beta_min, ce_beta_max)
+            merge_new_children_simple(children, stack, n_sparsity)
+
+        self.assign_identifiers_to_elements()
+        self.elapsed_time_tiling = timer() - starttime_tiling
+        print "Finished tiling creation..."
+        if self.options.get('print_summary', False):
+            tab = self.tabularise_results()
+            print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
+                    "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
+
 
     def default_options(self):
         """ Returns a default option setting. Each option that is not overriden
