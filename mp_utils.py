@@ -1,4 +1,10 @@
-#coding: utf8
+# coding: utf8
+""" Utility methods for multi-penalty tiling creation. Methods are for
+    calculation B_beta, y_beta and performing (eventually support restricted)
+    least squares regressions."""
+
+__author__ = "Timo Klock"
+
 import numpy as np
 from pykrylov.lls import LSMRFramework
 
@@ -35,8 +41,9 @@ def calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta):
     ----------
     Tuple (B_beta, y_beta) calculated from input data.
     """
-    tmp = svdAAt_U.dot(np.diag(np.sqrt(beta/(beta + svdAAt_S)))).dot(svdAAt_U.T)
+    tmp = svdAAt_U.dot(np.diag(np.sqrt(beta / (beta + svdAAt_S)))).dot(svdAAt_U.T)
     return tmp.dot(A), tmp.dot(y)
+
 
 def calc_B_y_beta_selection(A, y, svdAAt_U, svdAAt_S, beta, I, J):
     """ Auxiliary function calculating the matrices B_beta[:,I] and B_beta[:,J]
@@ -80,16 +87,17 @@ def calc_B_y_beta_selection(A, y, svdAAt_U, svdAAt_S, beta, I, J):
     of the index sets I or J is empty, None is returned instead of the
     respective matrix.
     """
-    tmp = svdAAt_U.dot(np.diag(np.sqrt(beta/(beta + svdAAt_S)))).dot(svdAAt_U.T)
+    tmp = svdAAt_U.dot(np.diag(np.sqrt(beta / (beta + svdAAt_S)))).dot(svdAAt_U.T)
     if len(J) > 0:
-        B_betaJ = tmp.dot(A[:,J])
+        B_betaJ = tmp.dot(A[:, J])
     else:
         B_betaJ = None
     if len(I) > 0:
-        B_betaI = tmp.dot(A[:,I])
+        B_betaI = tmp.dot(A[:, I])
     else:
         B_betaI = None
     return B_betaJ, B_betaI, tmp.dot(y)
+
 
 def least_squares_regression(support, matrix, rhs):
     """ Method performs a least squares regression for the problem
@@ -124,6 +132,7 @@ def least_squares_regression(support, matrix, rhs):
     system, consult the docs of LSMR to see which solution is provided.
     """
     return regularised_least_squares_regression(0.0, support, matrix, rhs)
+
 
 def regularised_least_squares_regression(reg_param, support, matrix, rhs):
     """ Method performs a regularised least squares regression, i.e. solves
@@ -162,10 +171,11 @@ def regularised_least_squares_regression(reg_param, support, matrix, rhs):
     The implementation is based on the Golub-Kahan bidiagonalization process
     from the pykrylov package. """
     sol = np.zeros(matrix.shape[1])
-    lsmr_solver = LSMRFramework(matrix[:,support])
-    lsmr_solver.solve(rhs, damp = reg_param)
+    lsmr_solver = LSMRFramework(matrix[:, support])
+    lsmr_solver.solve(rhs, damp=reg_param)
     sol[support] = lsmr_solver.x
     return sol
+
 
 def solve_mp_fixed_support(alpha, beta, support, signum, B_beta, y_beta, A, y):
     """ Calculate (u_ab, v_ab) in a fast way on a fixed support. The related
@@ -210,16 +220,17 @@ def solve_mp_fixed_support(alpha, beta, support, signum, B_beta, y_beta, A, y):
     Tuple of two numpy vectors of shape (n_features) corresponding to the
     solution u_ab and v_ab in (1) and (2).
     """
-    matrix = B_beta[:,support].T.dot(B_beta[:,support])
-    rhs = B_beta[:,support].T.dot(y_beta)
+    matrix = B_beta[:, support].T.dot(B_beta[:, support])
+    rhs = B_beta[:, support].T.dot(y_beta)
     rhs = rhs - alpha * signum
     u_ab_I = np.linalg.solve(matrix, rhs)
-    rhs = y - A[:,support].dot(u_ab_I)
+    rhs = y - A[:, support].dot(u_ab_I)
     v_ab = regularised_least_squares_regression(beta, np.arange(A.shape[1]),
                                                 A, rhs)
     u_ab = np.zeros(A.shape[1])
     u_ab[support] = u_ab_I
     return u_ab, v_ab
+
 
 def approximate_solve_mp_fixed_support(support, matrix, rhs):
     """ Method calculates an approximative solution (u_(a,b), v_(a,b)) for a

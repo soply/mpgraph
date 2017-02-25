@@ -173,7 +173,7 @@ def main(argv):
         'sparsity_level': 10,
         'smallest_signal': 1.5,
         'largest_signal': 2.0,
-        'noise_type_signal': 'linf_bounded',
+        'noise_type_signal': 'uniform_ensured_max',
         'noise_lev_signal': 0.2,
         'noise_type_measurements': 'gaussian',
         'noise_lev_measurements': 0.0,
