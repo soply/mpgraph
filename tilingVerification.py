@@ -1,6 +1,12 @@
 # coding: utf8
-import operator
+""" Verification & visualisation methods for tiling. Currently implemented:
+    -verify_tiling: Checks tilings validity.
+    -plot_tiling: Plots reconstruction of support tiling in 2D parameter space.
+    -plot_tiling_graph: Plots tiling as a graph structure. """
 
+__author__ = "Timo Klock"
+
+import operator
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,9 +64,22 @@ def verify_tiling(tilingelement):
     return True
 
 def plot_tiling(tilingelement, n_disc=3):
-    """ Plot the support tiling outgoing from the given node as a root. We
-    use bds_order and the distance from the root_node to define some notion
-    of a layered structure. """
+    """ Plot the support tiling in the 2D parameter space (x = beta, y = alpha),
+    starting from the given tiling element until the maximum depth.
+
+    Parameters
+    -------------
+    tilingelement : object of class TilingElement
+        Root element from which downwards the support tiling will be plottet.
+
+    n_disc : Integer
+        Number of equidistant anchor points that is used for approximating the
+        boundaries of a tiling element. n_disc = 3 for example means there are
+        in total 3 + 2 points used in each tiling element to interpolate the
+        boundary. Increasing this increases the interpolation accuracy but
+        also quickly increases the computational effort. n_disc > 1 only works
+        for tilings up to a small sparsity level.
+    """
     elements = tilingelement.bds_order()
     max_layer = max(elements.iteritems(), key=operator.itemgetter(1))[1]
     # Calculate elements in inverse relation ship, ie. layer to elements
@@ -139,6 +158,26 @@ def plot_tiling(tilingelement, n_disc=3):
     plt.show()
 
 def plot_tiling_graph(tilingelement, y_mode='layered'):
+    """ Plot the support tiling as a graph. Two modes are possible: in 'layered'
+    the alpha parameter is replaced by the number of Lasso-path steps from the
+    root node (this is usually the most preferable mode providing the best
+    visual quality). If y_mode differs from layered, approximated
+    coordinate midpoints are used to place the nodes in a 2D parameter space.
+    This is usually not advisiable since the midpoints are clustered together
+    for close to zero, if larger solutions to larger sparsity levels are
+    calculated.
+
+    Parameters
+    -------------
+    tilingelement : object of class TilingElement
+        Root element from which downwards the support tiling will be plottet.
+
+    y_mode : python string
+        y_mode == 'layered': Number of Lasso-path steps from root node will be
+                             used as y-axis entry.
+        y_mode != 'layered': Approximated tiling centers will be used
+                             (1/2*(beta_min+beta_max), 1/2*(alpha_min+alpha_max)).
+    """
     vertices = tilingelement.bds_order()
     plt.figure()
     for element, layer in vertices.iteritems():
