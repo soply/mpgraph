@@ -1,4 +1,9 @@
 # coding: utf8
+""" Contains the class 'Tiling' that corresponds to a support tiling. Provides
+    main interface to use the code via 'wrapper_create_tiling' or creating
+    and/or interacting with an object of class 'Tiling'. """
+
+__author__ = "Timo Klock"
 
 from timeit import default_timer as timer
 
@@ -154,7 +159,7 @@ class Tiling(object):
             -Remark: If only 1 child has been found, it could happen that it
             needs to be merged to the right and to the left!
 
-        4) Now maybe have uncompleted children to process on the respective
+        4) Now we maybe have uncompleted children to process on the respective
         extended beta regions before we can continue with 1) on the next
         oldest node. That's what the while-loop is for:
             While we still have uncompleted children:
@@ -211,7 +216,7 @@ class Tiling(object):
             if self.options['verbose'] >= 1:
                 print "Current stack size: {0}".format(len(stack))
                 print "Support size of first element on stack: {0}".format(
-                                                        len(stack[0].support))
+                    len(stack[0].support))
             current_element = stack.pop(0)
             children = current_element.find_children()
             uncompleted_children, children_for_stack = \
@@ -232,11 +237,67 @@ class Tiling(object):
         if self.options.get('print_summary', False):
             tab = self.tabularise_results()
             print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
-                    "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
-
+                                         "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
 
     def create_tiling_simple(self, beta_min, beta_max, n_sparsity, options=None):
-        """ADD DOC"""
+        """ Secondary, main method of this object class that is called to run
+        the tiling creation in a simpler but slower manner. It takes as arguments
+        the corridor of parameters [beta_min, beta_max] that we want to consider,
+        as well as the maximum number of Lasso steps from the root step
+        n_sparsity. As a remark we should notice that this does not mean that
+        all supports of size n_sparsity are found in general, but only if the
+        'LARS' mode is used. This is because other modes like 'LASSO' allow
+        dropping entries from the support.
+
+        Methodology
+        -------------
+        The tiling is built up successively. Generally a stack is used to keep
+        track of all tiling elements that still need processing. This stack has
+        entries of the form (tilingElement object, beta1, beta2), meaning that
+        the tiling element is unprocessed (no children known) in (beta1, beta2).
+
+        The algorithm for works as follows.
+            1) Start with (root_tile, beta_min, beta_max) in stack.
+
+            2) Pick element (tilingElement, beta1, beta_2) and search for
+               children in (beta1, beta2).
+
+            3) Merge children into the tiling (see docs in tilingMerging.py).
+
+            4) Within merging, all newly discovered tiles that could not be
+               merged to previously existing tiling elements are added to the
+               stack. Those that could have been merged affected a change in
+               the beta range of already existing tiling elements. The
+               affected elements is put onto the stack with the respective
+               beta range.
+
+            5) Go to 2) until no more elements are on the stack. Note that
+               tiling elements with support size > n_sparsity are not added to
+               the stack.
+
+        Parameters
+        ---------------
+        beta_min : float
+            Specifies the minimum for the regularisation parameter beta.
+
+        beta_max : float
+            Specifies the maximum for the regularisation parameter beta.
+
+        n_sparsity :
+            Maximum number of Lasso-path steps from root node considered, that
+            is equivalent to the maximum support size of u if a mode is chosen
+            where indices can not be dropped (e.g. 'LARS').
+
+        options : python dict
+            If options from construction of this element shall be overriden,
+            this can be done by passing this argument. Should have same keys,
+            vals as explained in the default_options method.
+
+        Remark
+        ---------------
+        More information on the algorithm can be found in the paper ... or in
+        the comments on sub methods of the code.
+        """
         # Override options if desired
         if options is not None:
             self.options = dict(self.options.items() + options.items())
@@ -250,7 +311,7 @@ class Tiling(object):
             if self.options['verbose'] >= 1:
                 print "Current stack size: {0}".format(len(stack))
                 print "Minimum support length on stack: {0}".format(
-                                                        len(stack[0][0].support))
+                    len(stack[0][0].support))
             current_element, ce_beta_min, ce_beta_max = stack.pop(0)
             children = current_element.find_children(ce_beta_min, ce_beta_max)
             merge_new_children_simple(children, stack, n_sparsity)
@@ -261,8 +322,7 @@ class Tiling(object):
         if self.options.get('print_summary', False):
             tab = self.tabularise_results()
             print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
-                    "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
-
+                                         "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
 
     def default_options(self):
         """ Returns a default option setting. Each option that is not overriden
@@ -294,7 +354,7 @@ class Tiling(object):
             "verbose": 2,
             "mode": "LARS",
             "env_minimiser": "scipy_brentq",
-            "print_summary" : True
+            "print_summary": True
         }
 
     def find_support_to_supportsize(self, support_size):
@@ -315,7 +375,7 @@ class Tiling(object):
         """
         tiling_elements = self.root_element.bds_order()
         return [te for te in tiling_elements.keys() if
-                                                len(te.support) == support_size]
+                len(te.support) == support_size]
 
     def find_supportpath_to_beta(self, beta):
         """ Method to find all supports and sign patterns for a fixed beta in
@@ -338,7 +398,7 @@ class Tiling(object):
         """
         assert self.root_element is not None
         assert self.root_element.beta_min <= beta and \
-               self.root_element.beta_max >= beta
+            self.root_element.beta_max >= beta
         current_element = self.root_element
         supports = []
         sign_patterns = []
@@ -348,7 +408,7 @@ class Tiling(object):
             current_element = current_element.child_to_beta(beta)
         return supports, sign_patterns
 
-    def tabularise_results(self, u_real_for_comparison = None):
+    def tabularise_results(self, u_real_for_comparison=None):
         """ Method to tabulise the tiling results. Each row belongs to a single
         tiling element and each row contains the following options about a
         specific tiling element:
@@ -392,17 +452,17 @@ class Tiling(object):
         else:
             real_support = np.zeros(self.A.shape[1])
         for (i, (te, layer)) in enumerate(tiling_elements):
-            results[i,0] = te.identifier
-            results[i,1] = te.alpha_min
-            results[i,2] = te.beta_min
-            results[i,3] = te.alpha_max
-            results[i,4] = te.beta_max
-            results[i,5] = len(te.support)
-            results[i,6] = len(np.setdiff1d(te.support, real_support)) + \
-                            len(np.setdiff1d(real_support, te.support))
+            results[i, 0] = te.identifier
+            results[i, 1] = te.alpha_min
+            results[i, 2] = te.beta_min
+            results[i, 3] = te.alpha_max
+            results[i, 4] = te.beta_max
+            results[i, 5] = len(te.support)
+            results[i, 6] = len(np.setdiff1d(te.support, real_support)) + \
+                len(np.setdiff1d(real_support, te.support))
         return results
 
-    def show_table(self, u_real_for_comparison = None):
+    def show_table(self, u_real_for_comparison=None):
         """ Show the summary table after creating the tiling. Can be given the
         real solution to compare and see symmetric differences.
 
@@ -412,16 +472,15 @@ class Tiling(object):
             The signal that was used in generating the problem data (or
             something else to compare the found collected to).
         """
-        tab = self.tabularise_results(u_real_for_comparison =
-                                            u_real_for_comparison)
+        tab = self.tabularise_results(u_real_for_comparison=u_real_for_comparison)
         print tabulate(tab, headers=["Identifier", "alpha_min", "beta_min",
-                "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
+                                     "alpha_max", "beta_max", "#Supp", "Sym. Dif."])
 
-    def plot_tiling(self, n_disc = 3):
+    def plot_tiling(self, n_disc=3):
         """ Wrapper for plotting the reconstructed tiling. Calls method from
         tilingVerification.py on the root element.
         """
-        plot_tiling(self.root_element, n_disc = n_disc)
+        plot_tiling(self.root_element, n_disc=n_disc)
 
     def plot_tiling_graph(self, y_mode='layered'):
         """ Wrapper for plotting the graph corresponding to a tiling. Calls
@@ -501,11 +560,11 @@ class Tiling(object):
         intersected supports as values.
         """
         tilingelements_in_bds = self.root_element.bds_order()
-        del tilingelements_in_bds[self.root_element] # Remove root element
+        del tilingelements_in_bds[self.root_element]  # Remove root element
         supports = {}
         for layer in set(tilingelements_in_bds.values()):
             tes_to_layer = [te for te in tilingelements_in_bds
-                                        if tilingelements_in_bds[te] == layer]
+                            if tilingelements_in_bds[te] == layer]
             current_support = tes_to_layer.pop().support
             while len(tes_to_layer) > 0:
                 current_support = np.intersect1d(current_support,
