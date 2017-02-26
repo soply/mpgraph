@@ -115,7 +115,20 @@ def run_single(problem):
                         highest_ranked_is_real=highest_ranked_is_real)
     return tiling, best_tilingelement
 
-def main(argv):
+def main(argv, problem):
+    """ Method to run a single experiment. Problem characteristics, run
+    characteristics and tiling creation options are specified below. Can be used
+    from command line and as a method to call.
+
+    Parameters
+    --------------
+    argv : python list with 8 elements and arguments to run simulation.
+        Example: argv = ['i', 'test', 'v', 'true', 'p', 'graph-layered']
+
+    problem : python dictionary that contains the run characteristics.
+        See problem_factory/synthetic_random_data docs for details on the run
+        characteristics.
+    """
     identifier = ''
     verification = False
     plotting = 'no'
@@ -157,13 +170,26 @@ def main(argv):
         sys.exit(2)
     print "Running single simulation. Results will be stored in folder {0}".format(
         identifier)
+    problem.update({'identifier' : identifier})
+    tiling, best_tilingelement = run_single(problem)
+    if verification:
+        tiling.verify_tiling()
+    if plotting == 'graph':
+        tiling.plot_tiling_graph(y_mode = 'alpha')
+    elif plotting == "graph-layered":
+        tiling.plot_tiling_graph(y_mode = 'layered')
+    elif plotting == "tiling":
+        tiling.plot_tiling(n_disc = 7)
+    else:
+        print "Plotting method {0} not recognized.".format(plotting)
+
+if __name__ == "__main__":
     tiling_options = {
         'verbose': 2,
         'mode': 'LASSO',
         'print_summary' : True
     }
     problem = {
-        'identifier': identifier,
         'tiling_options': tiling_options,
         'beta_min': 1e-1,
         'beta_max': 100.0,
@@ -179,15 +205,4 @@ def main(argv):
         'noise_lev_measurements': 0.0,
         'random_seed': 123456
     }
-    tiling, best_tilingelement = run_single(problem)
-    if verification:
-        tiling.verify_tiling()
-    if plotting == 'graph':
-        tiling.plot_tiling_graph(y_mode = 'alpha')
-    elif plotting == "graph-layered":
-        tiling.plot_tiling_graph(y_mode = 'layered')
-    elif plotting == "tiling":
-        tiling.plot_tiling(n_disc = 7)
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+    main(sys.argv[1:], problem)

@@ -214,7 +214,20 @@ def print_meta_results(folder):
     print "Examples highest ranked support is incorrect {0}".format(
                                                         highest_ranked_wrong)
 
-def main(argv):
+def main(argv, problem):
+    """ Method to run a batch of experiments. Problem characteristics, run
+    characteristics and tiling creation options are specified below. Can be used
+    from command line and as a method to call.
+
+    Parameters
+    --------------
+    argv : python list with 4 elements and arguments to run simulation.
+        Example: argv = ['t', 'run', 'i', 'test123']
+
+    problem : python dictionary that contains the run characteristics.
+        See problem_factory/synthetic_random_data docs for details on the run
+        characteristics.
+    """
     identifier = ''
     task = ''
     helpstr = ("===============================================================\n"
@@ -241,33 +254,10 @@ def main(argv):
         print "Please add identifer and/or task. Run file as follows:\n"
         print helpstr
         sys.exit(2)
+    problem.update({'identifier' : identifier})
     if task == 'run':
         print "Running batch simulation. Results will be stored in folder {0}".format(
             identifier)
-
-        tiling_options = {
-            'verbose': 2,
-            'mode': 'LASSO',
-            'print_summary' : False
-        }
-        problem = {
-            'identifier': identifier,
-            'tiling_options': tiling_options,
-            'num_tests': 100,
-            'beta_min': 1e-06,
-            'beta_max': 100,
-            'upper_bound_tilingcreation': 24,
-            'n_measurements': 250,
-            'n_features': 800,
-            'sparsity_level': 15,
-            'smallest_signal': 1.5,
-            'largest_signal': 2.0,
-            'noise_type_signal': 'uniform_ensured_max',
-            'noise_lev_signal': 0.05,
-            'noise_type_measurements': 'gaussian',
-            'noise_lev_measurements': 0.0,
-            'random_seed': 1223445
-        }
         run_numerous_one_constellation(problem)
     elif task == 'show':
         try:
@@ -283,4 +273,26 @@ def main(argv):
         sys.exit(2)
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    tiling_options = {
+        'verbose': 2,
+        'mode': 'LASSO',
+        'print_summary' : False
+    }
+    problem = {
+        'tiling_options': tiling_options,
+        'num_tests': 100,
+        'beta_min': 1e-06,
+        'beta_max': 100,
+        'upper_bound_tilingcreation': 15,
+        'n_measurements': 250,
+        'n_features': 800,
+        'sparsity_level': 15,
+        'smallest_signal': 1.5,
+        'largest_signal': 2.0,
+        'noise_type_signal': 'uniform_ensured_max',
+        'noise_lev_signal': 0.2,
+        'noise_type_measurements': 'gaussian',
+        'noise_lev_measurements': 0.0,
+        'random_seed': 1223445
+    }
+    main(sys.argv[1:], problem)
