@@ -4,7 +4,7 @@ import numpy as np
 from scipy import optimize
 
 from lasso_path_utils import calc_hit_cand, calc_hit_cand_selection
-from mp_utils import calc_B_y_beta, calc_B_y_beta_selection
+from ..mp_utils import calc_B_y_beta, calc_B_y_beta_selection
 
 
 def create_children_lars(support, signum, beta_min, beta_max,

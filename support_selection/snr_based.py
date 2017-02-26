@@ -4,7 +4,7 @@ from timeit import default_timer as timer
 import numpy as np
 from tabulate import tabulate
 
-from mp_utils import approximate_solve_mp_fixed_support
+from ..mp_utils import approximate_solve_mp_fixed_support
 
 
 def highest_support_constrained_snr(tiling, show_table=False,
