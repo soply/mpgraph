@@ -70,13 +70,16 @@ def run_numerous_one_constellation(problem, results_prefix = None):
     batch of runs.
     """
     if results_prefix is not None:
-        resultdir = results_prefix + problem['identifier'] + '/'
+        resultdir = results_prefix + "mp_" + problem['tiling_options']['mode'] + \
+                                            "_" + problem['identifier'] + '/'
     else:
-        resultdir = 'results_batch/' + problem['identifier'] + '/'
+        resultdir = 'results_batch/' + "mp_" + problem['tiling_options']['mode'] + \
+                                            "_" +problem['identifier'] + '/'
     if not os.path.exists(resultdir):
         os.makedirs(resultdir)
-    with open(resultdir + 'log.txt', "a+") as f:
+    with open(resultdir + 'log.txt', "w") as f:
         json.dump(problem, f, sort_keys=True, indent=4)
+        f.write("\n")
 
     meta_results = np.zeros((9, problem['num_tests']))
     np.random.seed(problem["random_seed"])
@@ -102,7 +105,7 @@ def run_numerous_one_constellation(problem, results_prefix = None):
             elapsed_time_svd = tiling.elapsed_time_svd
             elapsed_time_tiling = tiling.elapsed_time_tiling
             ranking, best_tilingelement, elapsed_time_selection = \
-                highest_support_constrained_snr(tiling, show_table=True,
+                highest_support_constrained_snr(tiling, show_table=False,
                                                 target_support=target_support)
             # Postprocessing of results
             # Total elapsed time
@@ -155,19 +158,26 @@ def create_meta_results(folder):
     -Format of meta results is one run per column, 5 rows corresponding to the
      above mentioned characteristics.
     """
-    meta_results = np.zeros((0, 5))
-    meta_results_tmp = np.zeros(5)
+    correct_support_selection = []
+    symmetric_difference = []
+    tiling_contains_real = []
+    highest_ranked_is_real = []
+    elapsed_time = []
     i = 0
     while os.path.exists(folder + str(i) + "_data.npz"):
         datafile = np.load(folder + str(i) + "_data.npz")
-        meta_results_tmp[0] = (datafile['symmetric_difference'] == 0)
-        meta_results_tmp[1] = datafile['symmetric_difference']
-        meta_results_tmp[2] = datafile['tiling_contains_real']
-        meta_results_tmp[3] = datafile['highest_ranked_is_real']
-        meta_results_tmp[4] = datafile['elapsed_time']
-        meta_results = np.vstack((meta_results, meta_results_tmp))
+        correct_support_selection.append((datafile['symmetric_difference'] == 0))
+        symmetric_difference.append(datafile['symmetric_difference'])
+        tiling_contains_real.append(datafile['tiling_contains_real'])
+        highest_ranked_is_real.append(datafile['highest_ranked_is_real'])
+        elapsed_time.append(datafile['elapsed_time'])
         i = i + 1
-    np.savetxt(folder + "meta.txt", meta_results)
+    np.savez_compressed(folder + "meta",
+                        correct_support_selection=np.array(correct_support_selection),
+                        symmetric_difference=np.array(symmetric_difference),
+                        tiling_contains_real=np.array(tiling_contains_real),
+                        highest_ranked_is_real=np.array(highest_ranked_is_real),
+                        elapsed_time=elapsed_time)
 
 def print_meta_results(folder):
     """ Method to print out the meta results to the terminal. The print-out
@@ -186,29 +196,33 @@ def print_meta_results(folder):
         Foldername of where to the respective find 'meta.txt' file. Note that
         the full searched location is given by pwd+'<folder>/meta.txt'.
     """
-    meta_results = np.loadtxt(folder + "/meta.txt")
-    num_tests = meta_results.shape[0]
-    meta_summary = np.sum(meta_results, axis=0) / float(num_tests)
+    meta_results = np.load(folder + "/meta.npz")
+    num_tests = meta_results["elapsed_time"].shape[0]
     print "================== META RESULTS ======================"
     print "1) Percentages:"
-    print "Support at the end recovered: {0}".format(meta_summary[0])
-    print "Tiling contains real support: {0}".format(meta_summary[2])
-    print "Highest ranked support is real: {0}".format(meta_summary[3])
+    print "Support at the end recovered: {0}".format(
+            np.sum(meta_results["correct_support_selection"])/float(num_tests))
+    print "Tiling contains real support: {0}".format(
+            np.sum(meta_results["correct_support_selection"])/float(num_tests))
+    print "Highest ranked support is real: {0}".format(
+            np.sum(meta_results["correct_support_selection"])/float(num_tests))
     print "\n2) Timings:"
     print "Avg = {0}    \nVariance = {1}  \n0.95-range = {2}   \nMin = {3}   \nMax = {4}".format(
-        np.mean(meta_results[:, 4]),
-        np.var(meta_results[:, 4]),
-        [np.min(np.percentile(meta_results[:, 4], 0.95)),
-            np.max(np.percentile(meta_results[:, 4], 95))],
-        np.min(meta_results[:, 4]),
-        np.max(meta_results[:, 4]))
+        np.mean(meta_results["elapsed_time"]),
+        np.var(meta_results["elapsed_time"]),
+        [np.min(np.percentile(meta_results["elapsed_time"], 0.95)),
+            np.max(np.percentile(meta_results["elapsed_time"], 95))],
+        np.min(meta_results["elapsed_time"]),
+        np.max(meta_results["elapsed_time"]))
     print "\n3) Suspicious cases:"
-    incorrect_supp = np.where(meta_results[:, 0] == 0)[0]
-    tiling_does_not_contain_real =  np.where(meta_results[:, 2] == 0)[0]
-    highest_ranked_wrong = np.where(meta_results[:, 3] == 0)[0]
+    incorrect_supp = np.where(meta_results["correct_support_selection"] == 0)[0]
+    tiling_does_not_contain_real =  np.where(
+                                meta_results["tiling_contains_real"] == 0)[0]
+    highest_ranked_wrong = np.where(meta_results["highest_ranked_is_real"] == 0)[0]
     print "Examples support not correct: {0}".format(incorrect_supp)
     print "Symmetric differences unequal to zero: {0}".format(
-                        zip(incorrect_supp, meta_results[incorrect_supp, 1]))
+            zip(incorrect_supp, meta_results["symmetric_difference"]
+                                            [incorrect_supp]))
     print "Examples tiling does not contain real support {0}".format(
                                                 tiling_does_not_contain_real)
     print "Examples highest ranked support is incorrect {0}".format(
@@ -280,7 +294,7 @@ if __name__ == "__main__":
     }
     problem = {
         'tiling_options': tiling_options,
-        'num_tests': 100,
+        'num_tests': 5,
         'beta_min': 1e-06,
         'beta_max': 100,
         'upper_bound_tilingcreation': 15,

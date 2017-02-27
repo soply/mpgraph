@@ -72,8 +72,9 @@ def run_single(problem):
     resultdir = 'results_single/' + problem['identifier'] + '/'
     if not os.path.exists(resultdir):
         os.makedirs(resultdir)
-    with open(resultdir + 'log.txt', "a+") as f:
+    with open(resultdir + 'log.txt', "w") as f:
         json.dump(problem, f, sort_keys=True, indent=4)
+        f.write("\n")
 
     np.random.seed(problem["random_seed"])
     # Arguments to run the tiling creation
