@@ -142,7 +142,9 @@ def merge_new_children_faster(children, stack, n_sparsity):
             # Case both candidates are still on the stack. Since only the left
             # candidate will remain, we remove the right_candidate from the
             # stack.
-            stack.remove(right_candidate)
+            if len(right_candidate.support) < n_sparsity:
+                # Excluding special case when end of creation is reached.
+                stack.remove(right_candidate)
 
         if children[0].options['verbose'] > 1:
             print "Merging both {0} with {1} and {2}".format(left_candidate,
