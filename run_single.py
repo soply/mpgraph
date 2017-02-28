@@ -76,7 +76,7 @@ def main(argv, problem):
 if __name__ == "__main__":
     tiling_options = {
         'verbose': 2,
-        'mode': 'LARS',
+        'mode': 'LASSO',
         'print_summary' : True
     }
     problem = {
