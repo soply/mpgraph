@@ -281,5 +281,8 @@ def create_noise(length, noise_level, noise_type, random_seed=None,
         aux_noise = np.random.normal(size=length)
         scaling_factor_noise = noise_level / np.max(np.abs(aux_noise))
         noise = aux_noise * scaling_factor_noise
-
+    else:
+        raise NotImplementedError("Unknown noise type {0}. Please choose" + \
+            " from the list 'uniform', 'uniform_ensured_max', 'gaussian'" + \
+            ", 'gaussian_ensured_max'.")
     return noise
