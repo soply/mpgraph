@@ -26,23 +26,11 @@ def create_children_lasso(support, signum, beta_min, beta_max,
     def get_all_cand(beta):
         B_beta, y_beta = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta)
         J = np.setdiff1d(np.arange(A.shape[1]), support)
-
-        AJ = B_beta[:, J]
-        AI = B_beta[:, support]
-        AjT_Ai_inverse_AtA = AJ.T.dot(AI).dot(\
-            np.linalg.inv(AI.T.dot(AI)))
-        aux_bot = AjT_Ai_inverse_AtA.dot(signum)
         return calc_all_cand(B_beta, y_beta, support, signum)
 
     def candidate_difference(beta, index1, index2):
         I_in_support = np.where(np.in1d(support, np.array([index1, index2])))[0]
         J = np.setdiff1d([index1, index2], support[I_in_support])
-        if len(I_in_support) > 0:
-            print index1, index2, support
-            print I_in_support
-            print J
-            # import pdb
-            # pdb.set_trace()
         B_betaJ, B_betaI, y_beta = calc_B_y_beta_selection(A, y,
                                                            svdAAt_U, svdAAt_S,
                                                            beta, I=support,
@@ -93,60 +81,14 @@ def create_children_lasso(support, signum, beta_min, beta_max,
             candidates, used_signs = calc_hit_cand_selection(B_betaI, B_betaJ,
                                                              y_beta, signum)
         return (candidates[0] - candidates[1]) ** 2
-
-    if np.abs(beta_min - beta_max) < 1e-10:
-        print beta_min, beta_max
-        betas = np.linspace(beta_min, beta_max, 1000)
-        vals = np.zeros((1000, A.shape[1]))
-        for i in range(1000):
-            vals[i,:], dummy = get_all_cand(betas[i])
-        import matplotlib.pyplot as plt
-        plt.plot(betas, vals)
-        plt.plot(betas, vals)
-        plt.show()
-        import pdb
-        pdb.set_trace()
-
+        
     # Initialisation
     if additional_indices is None:
-        if np.array_equal(support, np.array([ 2,  4,  5, 11, 17, 25, 30, 35, 40, 46, 47])):
-            print "From now on"
-            print beta_min, beta_max
-            betas = np.linspace(beta_min, beta_max, 1000)
-            vals = np.zeros((1000, A.shape[1]))
-            for i in range(1000):
-                vals[i,:], dummy = get_all_cand(betas[i])
-            import matplotlib.pyplot as plt
-            plt.plot(betas, vals)
-            plt.plot(betas, vals)
-            plt.show()
-            import pdb
-            pdb.set_trace()
         candidates_max, used_signs_max = get_all_cand(beta_max)
         candidates_min, used_signs_min = get_all_cand(beta_min)
         # Filter out all candidates that are above the current curve
         boun_at_max = candidates_max[last_entry_changed]
         boun_at_min = candidates_min[last_entry_changed]
-        # if any(np.logical_and(candidates_min[support] > boun_at_min, candidates_max[support] < boun_at_max)):
-        #     idx = np.where(np.logical_and(candidates_min > boun_at_min,
-        #                                   candidates_max < boun_at_max))[0]
-        #     idx = np.intersect1d(support, idx)
-        #     print support
-        #     print "Last joined", last_entry_changed
-        #     print "Idx", idx
-        #     print "Betas: ", beta_min, beta_max
-        #     print "C_min: ", candidates_min[idx], boun_at_min
-        #     print "C_max: ", candidates_max[idx], boun_at_max
-        #     betas = np.linspace(beta_min, beta_max, 1000)
-        #     vals = np.zeros((1000, A.shape[1]))
-        #     for i in range(1000):
-        #         vals[i,:], dummy = get_all_cand(betas[i])
-        #     import matplotlib.pyplot as plt
-        #     plt.plot(betas, vals[:,idx])
-        #     plt.plot(betas, vals[:,last_entry_changed])
-        #     plt.show()
-        #     import pdb
-        #     pdb.set_trace()
         # FIXME: It is safer to add even a small tolerance such that we really
         #        only consider cross_candidates that are smaller in the whole
         #        range [beta_min, beta_max].
@@ -154,10 +96,13 @@ def create_children_lasso(support, signum, beta_min, beta_max,
                                    candidates_max >= boun_at_max))[0]
         # Neglect also entries that have a minus value either at boun_at_max or
         # at boun_at_min
-        neglect_entries_minus = np.where(np.logical_or(candidates_min < 0,
-                                         candidates_max < 0))[0]
-        neglect_entries = np.intersect1d(neglect_entries, support) # hit_candidates are automatically smaller???
-        neglect_entries = np.append(neglect_entries, neglect_entries_minus)
+        neglect_entries_in_support = find_negligible_entries(A, y, svdAAt_U,
+                                                             svdAAt_S, support,
+                                                             signum, beta_min,
+                                                             beta_max)
+        neglect_entries_in_support = support[neglect_entries_in_support]
+        neglect_entries = np.intersect1d(neglect_entries, support) # Because hit candidates are automatically smaller (should be automatically null-intersection here)
+        neglect_entries = np.append(neglect_entries, neglect_entries_in_support)
         candidates_min[neglect_entries] = -1.0
         candidates_max[neglect_entries] = -1.0
         order_max = np.argsort(candidates_max)
@@ -279,3 +224,17 @@ def lasso_children_merge(children):
         else:
             ctr += 1
     return children
+
+def find_negligible_entries(A, y, svdAAt_U, svdAAt_S, support, signum,
+                            beta_min, beta_max):
+    # Calculate denominator for crossing betas for the lower beta
+    B_beta_min, dummy = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta_min)
+    AI_min = B_beta_min[:, support]
+    inverseAtA_min = np.linalg.inv(AI_min.T.dot(AI_min))
+    aux_bot_min = inverseAtA_min.dot(signum)
+    # Calculate denominator for crossing betas for the upper beta
+    B_beta_max, dummy = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta_max)
+    AI_max = B_beta_max[:, support]
+    inverseAtA_max = np.linalg.inv(AI_max.T.dot(AI_max))
+    aux_bot_max = inverseAtA_max.dot(signum)
+    return np.where(np.multiply(aux_bot_min, aux_bot_max) < 0)[0]
