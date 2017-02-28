@@ -9,7 +9,7 @@ import testcases_graph_operations as tgo
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 print os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir)
 
-from tilingElement import TilingElement
+from mpgraph.tilingElement import TilingElement
 
 
 def test_graph_operations(testcase):

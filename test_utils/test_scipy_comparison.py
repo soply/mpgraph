@@ -3,10 +3,10 @@ import numpy as np
 
 from sklearn import linear_model
 
-from mp_utils import calc_B_y_beta
-from problem_factory.synthetic_random_data import \
+from mpgraph.mp_utils import calc_B_y_beta
+from mpgraph.problem_factory.synthetic_random_data import \
     create_specific_problem_data_from_problem
-from tiling import wrapper_create_tiling
+from mpgraph.tiling import wrapper_create_tiling
 
 # Run characteristics for comparison. Can be changed!
 problem = {
