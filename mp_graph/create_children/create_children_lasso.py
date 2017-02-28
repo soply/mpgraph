@@ -94,8 +94,34 @@ def create_children_lasso(support, signum, beta_min, beta_max,
                                                              y_beta, signum)
         return (candidates[0] - candidates[1]) ** 2
 
+    if np.abs(beta_min - beta_max) < 1e-10:
+        print beta_min, beta_max
+        betas = np.linspace(beta_min, beta_max, 1000)
+        vals = np.zeros((1000, A.shape[1]))
+        for i in range(1000):
+            vals[i,:], dummy = get_all_cand(betas[i])
+        import matplotlib.pyplot as plt
+        plt.plot(betas, vals)
+        plt.plot(betas, vals)
+        plt.show()
+        import pdb
+        pdb.set_trace()
+
     # Initialisation
     if additional_indices is None:
+        if np.array_equal(support, np.array([ 2,  4,  5, 11, 17, 25, 30, 35, 40, 46, 47])):
+            print "From now on"
+            print beta_min, beta_max
+            betas = np.linspace(beta_min, beta_max, 1000)
+            vals = np.zeros((1000, A.shape[1]))
+            for i in range(1000):
+                vals[i,:], dummy = get_all_cand(betas[i])
+            import matplotlib.pyplot as plt
+            plt.plot(betas, vals)
+            plt.plot(betas, vals)
+            plt.show()
+            import pdb
+            pdb.set_trace()
         candidates_max, used_signs_max = get_all_cand(beta_max)
         candidates_min, used_signs_min = get_all_cand(beta_min)
         # Filter out all candidates that are above the current curve

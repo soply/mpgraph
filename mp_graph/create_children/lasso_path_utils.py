@@ -114,6 +114,7 @@ def calc_cross_cand_selection(AI, y, signum, indices):
         cross_top = inverseAtA.dot(AI.T).dot(y)
         cross_bot = inverseAtA.dot(signum)
         cross_candidates = np.divide(cross_top, cross_bot)
+        print cross_top[0], cross_bot[0]
     return cross_candidates
 
 def calc_cross_cand(A, y, support, signum):
