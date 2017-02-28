@@ -1,4 +1,8 @@
 # coding: utf8
+""" Callable run script to perform single experiments. """
+
+__author__ = "Timo Klock"
+
 import getopt
 import sys
 

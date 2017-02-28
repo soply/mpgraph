@@ -1,4 +1,11 @@
 # coding: utf8
+""" Implementation of elements of a tiling as a class. Each object of this class,
+    called TilingElement, constitutes a single tile of the tiling, ie. a
+    connected area of parameters that leads to the same support and sign
+    pattern. """
+
+__author__ = "Timo Klock"
+
 import numpy as np
 
 from create_children.create_children_lars import (create_children_lars,
@@ -8,9 +15,87 @@ from create_children.create_children_lasso import (create_children_lasso,
                                                    lasso_post_process_children)
 
 class TilingElement(object):
+    """ An object of the class TilingElement forms a single tile of the support
+    tiling of the solution to the multi-penalty functional
+
+        J_beta,alpha(u,v) = 1/2 || A(u+v) - y||_2^2 + alpha ||u||_1
+                            + beta/2 ||v||_2^2.
+
+    A tile is characterized by a connected area in the positive Euclidean plane
+    R_+^2 such that all parameters inside this area lead to the same support and
+    sign pattern. Forming all tiles, respectively objects of class TilingElement
+    for a fixed problem together, yields the full support tiling. These objects
+    are represented by the Tiling class, hence an object of the Tiling class is
+    usually related to many objects of the TilingElement class.
+
+    A tile usually has two markant parameters pairs: (alpha_min, beta_min) and
+    (alpha_max, beta_max). These are (usually) the smallest parameters such that
+    the respective support of the tile is reached as well as the largest
+    parameters.
+
+    More details on how the meaning of a tile and how we find these tiles for a
+    given fixed problems of the above mentioned type, can be found in the code
+    docs and in the article [1].
+
+    Sources
+    ------------------
+    [1]
+    """
 
     def __init__(self, alpha_min, alpha_max, beta_min, beta_max, support,
                  sign_pattern, parents, A, y, svdAAt_U, svdAAt_S, options):
+        """ Constructor for the TilingElement class.
+
+        Parameters
+        -----------
+        alpha_min : python float
+            Regularisation parameter alpha for the smallest parameter pair.
+
+        alpha_max : python float
+            Regularisation parameter alpha for the largest parameter pair.
+
+        beta_min : python float
+            Regularisation parameter beta for the smallest parameter pair.
+
+        beta_max : python float
+            Regularisation parameter beta for the largest parameter pair.
+
+        support : np.array of integers, shape (n_support)
+            Support of solution u_beta,alpha related to this tile.
+
+        sign_pattern : np.array of +,- 1, shape (n_support)
+            Sign pattern of solution u_beta,alpha related to this tile.
+
+        parents : list of tuples of the form (object of class TilingElement,
+            float, float).
+            Contains the parents of this tile in the support tiling (first entry),
+            as well as the beta-range inside which we can reach this tile from
+            the respective parent (2nd entry -> lower beta, 3rd entry -> higher
+            beta)
+
+        A : array, shape (n_measurements, n_features)
+            Measurement matrix in A(u+v) = y
+
+        y : array, shape (n_measurements)
+            Measurement vector in A(u+v) = y.
+
+        svdU : array, shape (n_measurements, n_measurements)
+            Matrix U of the singular value decomposition of A*A^T.
+
+        svdS : array, shape (n_measurements)
+            Array S with singular values of singular value decomposition of A*A^T.
+
+        options : python dict objects
+            Specifies the options for the run. See constructor to see which
+            options can be specified.
+
+        Remarks
+        ---------------
+        The problem data is only given by reference, ie. A, y, svdU, svdS points
+        to the same object among all tiles and the overlying tiling object. The
+        SVD matrices are heavily used in the find_children procedure and are
+        thus important to have here (speed-up!).
+        """
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
@@ -47,7 +132,13 @@ class TilingElement(object):
         self.identifier = identifier
 
     def get_root(self):
-        """ Returns the root node of the tiling this element belongs to."""
+        """ Returns the root node of the tiling this element belongs to.
+
+        Returns
+        --------------
+        The root node that belongs to the tiling connected to this tiling
+        element.
+        """
         curr_node = self
         while curr_node.parents is not None:
             curr_node = curr_node.parents[0][0]

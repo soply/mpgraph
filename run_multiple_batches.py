@@ -1,4 +1,9 @@
 # coding: utf8
+""" Callable run script to perform numerous simulations with multiple
+    constellations. """
+
+__author__ = "Timo Klock"
+
 import getopt
 import os
 import sys

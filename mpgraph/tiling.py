@@ -71,7 +71,29 @@ def wrapper_create_tiling(A, y, beta_min, beta_max, n_sparsity, prior=None,
 
 
 class Tiling(object):
-    """ Doc string """
+    """ An object of the class Tiling represents a part of the real support
+    tiling of the solution to the multi-penalty functional
+
+        J_beta,alpha(u,v) = 1/2 || A(u+v) - y||_2^2 + alpha ||u||_1
+                            + beta/2 ||v||_2^2.
+
+    The support tiling consists of connected areas of parameters in R^2, where
+    the parameters related to each of those connected areas yield the same
+    support and sign pattern. We call these areas tiles or tiling elements and
+    they are represented by objects of the class 'TilingElement'.
+
+    This class offers functions to reconstruct parts of the support tiling of a
+    solution u_beta,alpha by using multiple applications of the Lasso-path
+    algorithm or the LARS algorithm.
+
+    More details on how the tiling is reconstructed from the given input data,
+    can be found in the code docs and in the article [1].
+
+    Sources
+    ------------------
+    [1]
+
+    """
 
     def __init__(self, A, y, prior=None, options=None):
         """ Constructor for Tiling class.
