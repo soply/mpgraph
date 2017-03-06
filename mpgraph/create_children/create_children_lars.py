@@ -25,7 +25,6 @@ def create_children_lars(tiling_element, beta_min, beta_max):
     children.sort(key=lambda x: x[0][1]) # Sort by maximal beta parameter
     return children
 
-
 def aux_create_children_lars(support, signum, beta_min, beta_max,
                              minimiser, svdAAt_U, svdAAt_S, A, y,
                              additional_indices=None,
@@ -105,23 +104,56 @@ def aux_create_children_lars(support, signum, beta_min, beta_max,
             fminfun = optimize.bisect
         if minimiser in ["scipy_brentq", "scipy_brenth",
                          "scipy_ridder", "scipy_bisect"]:
-            x, res = fminfun(candidate_difference, beta_min,
-                             beta_max, xtol=1e-12,
-                             args=(order_max[-1], order_min[-1]),
-                             full_output=True)
+            beta_cross, res = fminfun(candidate_difference, beta_min,
+                                      beta_max, xtol=1e-12,
+                                      args=(order_max[-1], order_min[-1]),
+                                      full_output=True)
             nfev = res.function_calls
             fun = 1e-12
             success = res.converged
         if success:
-            hit_candidates_cross, used_signs_cross = get_all_hit_cand(x)
-            additional_indices.append(order_min[-1])
-            used_signs.append(used_signs_max[order_min[-1]])
-            boundary_parameters.insert(-1, (hit_candidates_cross[order_min[-1]],
-                                            x))
+            hit_candidates_cross, used_signs_cross = get_all_hit_cand(beta_cross)
+            hit_candidates_cross[neglect_entries] = -1.0
+            order_cross = np.argsort(hit_candidates_cross)
+            # Check if there is a third candidate larger than the two involved
+            # candidates in the crossing
+            if order_cross[-1] != order_min[-1] and \
+                                            order_cross[-1] != order_max[-1]:
+                # Case the crossing happened below another candidate. Make a
+                # recursive call for both ends.
+                aux_create_children_lars(support, signum, beta_min, beta_cross,
+                                         minimiser, svdAAt_U, svdAAt_S, A, y,
+                                         additional_indices=additional_indices,
+                                         used_signs=used_signs,
+                                         boundary_parameters=boundary_parameters,
+                                         hit_candidates_min=hit_candidates_min,
+                                         used_signs_min=used_signs_min,
+                                         order_min=order_min,
+                                         hit_candidates_max=hit_candidates_cross,
+                                         used_signs_max=used_signs_cross,
+                                         order_max=order_cross,
+                                         neglect_entries=neglect_entries)
+                aux_create_children_lars(support, signum, beta_cross, beta_max,
+                                         minimiser, svdAAt_U, svdAAt_S, A, y,
+                                         additional_indices=additional_indices,
+                                         used_signs=used_signs,
+                                         boundary_parameters=boundary_parameters,
+                                         hit_candidates_min=hit_candidates_cross,
+                                         used_signs_min=used_signs_cross,
+                                         order_min=order_cross,
+                                         hit_candidates_max=hit_candidates_max,
+                                         used_signs_max=used_signs_max,
+                                         order_max=order_max,
+                                         neglect_entries=neglect_entries)
+            else:
+                additional_indices.append(order_min[-1])
+                used_signs.append(used_signs_max[order_min[-1]])
+                boundary_parameters.insert(-1,
+                            (hit_candidates_cross[order_min[-1]], beta_cross))
         else:
             print """Warning: Could not find a crossing even if was suppposed to
-                    find crossing at {0}, {1}, {2}, {3}""".format(x, res, fun,
-                                                                  nfev)
+                    find crossing at {0}, {1}, {2}, {3}""".format(
+                                                    beta_cross, res, fun, nfev)
     else:
         # Bisection step
         beta_mid = 0.5 * (beta_min + beta_max)
