@@ -1,7 +1,7 @@
 #coding: utf8
 import numpy as np
 
-def calc_hit_cand_selection(AI, AJ, y, signum):
+def calc_hit_cand_selection(AI, AJ, y, signum, switch_sign = False):
     """ This method calculates the 'hit candidates' for the Lasso path algorithm.
     The hit candidates correspond to a subgradient that hits the required
     boundary |s| < 1, i.e. for alpha > alpha_hit[j] subgradient to index j would
@@ -23,6 +23,14 @@ def calc_hit_cand_selection(AI, AJ, y, signum):
     signum : array, shape (n_current_support)
         Contains the signs of the coefficients that are currently active, e.g.
         signum = np.array([1., -1., 1.]).
+
+    switch_sign : boolean
+        Allows to use different signs in the calculations of the alpha_hit
+        candidates. This becomes necessary in the special case of an entry
+        dropping out of the support. From this new tile we essentially have two
+        hitting boundaries, both of which belong to different signs. The
+        'switch_sign' == False variant gives the upper boundary, ie. the
+        boundary where the entry dropped out.
     """
     AtyJ = AJ.T.dot(y)
     if len(signum) == 0:
@@ -33,14 +41,10 @@ def calc_hit_cand_selection(AI, AJ, y, signum):
             np.linalg.inv(AI.T.dot(AI)))
         hit_top = (AJ.T.dot(np.identity(y.shape[0])) - \
             AjT_Ai_inverse_AtA.dot(AI.T)).dot(y)
-        # Check if plus or minus gives the upper bound for alpha
-        # FIXME: Note that Tibsharani paper can not transferred to this 1-by-1
-        # FIXME 2: Rethink this...
         aux_bot = AjT_Ai_inverse_AtA.dot(signum)
         use_sign = np.sign(hit_top)
-        # In special cases we have to override this choice! See below
-        # use_sign[aux_bot > 1.0] = -1.0 # In this case it is a negative value anyway...
-        # use_sign[aux_bot < (-1.0)] = 1.0
+        if switch_sign:
+            use_sign = (-1) * use_sign
         hit_bot = use_sign - aux_bot
         hit_cand = np.divide(hit_top, hit_bot)
     return hit_cand, use_sign

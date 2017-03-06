@@ -8,8 +8,7 @@ __author__ = "Timo Klock"
 
 import numpy as np
 
-from create_children.create_children_lars import (create_children_lars,
-                                                  lars_post_process_children)
+from create_children.create_children_lars import create_children_lars
 from create_children.create_children_lasso import (create_children_lasso,
                                                    lasso_children_merge,
                                                    lasso_post_process_children)
@@ -144,23 +143,53 @@ class TilingElement(object):
             curr_node = curr_node.parents[0][0]
         return curr_node
 
+    def index_in_many_predecessors(self, beta_min, beta_max, n_predecessors,
+                                   index):
+        """ Checks if a specific entry is in all n predecessors of this node
+        provided that the predecessor has overlap with the given parameter
+        region (beta_min, beta_max).
+
+        Parameters
+        -----------
+        beta_min : python float
+            Lower bound for parameter region
+
+        beta_max : python float
+            Upper bound for parameter region
+
+        n_predecessors : python Integer
+            Number of predecessors to check
+
+        index : python Integer
+            Index to check
+
+        Returns
+        ------------
+        True if the index is in all n predecessors, false otherwise.
+        """
+        if index not in self.support:
+            return False
+        elif n_predecessors == 0:
+            return True
+        else:
+            found_wrong_predecessor = False
+            for parent in self.parents:
+                if (parent[1] - beta_max < -1e-14 and
+                        beta_min - parent[2] < -1e-14) and not \
+                        parent[0].index_in_many_predecessors(beta_min,
+                            beta_max, n_predecessors - 1, index):
+                    return False
+            return True
+
+
+
     def find_children(self, beta_min=None, beta_max=None):
         if beta_min is None:
             beta_min = self.beta_min
         if beta_max is None:
             beta_max = self.beta_max
         if self.options["mode"] == "LARS" or self.parents is None:
-            additional_indices, boundary_parameters, used_signs = \
-                create_children_lars(self.support, self.sign_pattern, beta_min,
-                                     beta_max,
-                                     self.options["env_minimiser"],
-                                     self.svdAAt_U, self.svdAAt_S, self.A,
-                                     self.y)
-            children = lars_post_process_children(additional_indices,
-                                                  boundary_parameters,
-                                                  used_signs, self.support,
-                                                  self.sign_pattern)
-            children.sort(key=lambda x: x[0][1])
+            children = create_children_lars(self, beta_min, beta_max)
         elif self.options["mode"] == "LASSO":
             children = []
             # If this tiling element has different parents, we have to iterate
@@ -170,9 +199,19 @@ class TilingElement(object):
                 # Checks for overlap
                 if (parent[1] - beta_max < -1e-14 and
                         beta_min - parent[2] < -1e-14):
-                    new_index = np.setxor1d(self.support, parent[0].support)
-                    assert len(new_index) == 1
-                    new_index = new_index[0]
+                    # Get entry that last changed
+                    last_entry_changed = np.setxor1d(self.support, parent[0].support)
+                    assert len(last_entry_changed) == 1
+                    last_entry_changed = last_entry_changed[0]
+                    # Get sign to the last entry that changed
+                    if last_entry_changed in self.support:
+                        sign_last_entry_changed = self.sign_pattern[np.where(
+                                                    self.support == last_entry_changed)[0][0]]
+                    elif last_entry_changed in parent[0].support:
+                        sign_last_entry_changed = parent[0].sign_pattern[np.where(
+                                                    parent[0].support == last_entry_changed)[0][0]]
+                    else:
+                        raise RuntimeError("Can not find sign to the last changed entry.")
                     additional_indices, boundary_parameters, used_signs = \
                         create_children_lasso(self.support, self.sign_pattern,
                                               np.maximum(beta_min, parent[1]),  # beta_min
@@ -180,7 +219,9 @@ class TilingElement(object):
                                               self.options["env_minimiser"],
                                               self.svdAAt_U, self.svdAAt_S, self.A,
                                               self.y,
-                                              new_index)
+                                              last_entry_changed,
+                                              sign_last_entry_changed,
+                                              tiling_element=self)
                     children.extend(lasso_post_process_children(additional_indices,
                                                                 boundary_parameters,
                                                                 used_signs, self.support,
@@ -189,12 +230,13 @@ class TilingElement(object):
             children = lasso_children_merge(children)
 
         elif self.options["mode"] == "TEST":
+            # For debugging and testing only
             children = self.options["test_iterator"].next()
             children.sort(key=lambda x: x[0][1])
         else:
             raise NotImplementedError("Mode not implemented.")
         new_tes = []
-        for (i, child) in enumerate(children):
+        for child in children:
             new_tes.append(self.add_child(child[0][0], child[1][0], child[0][1],
                                           child[1][1], child[2], child[3]))
         self.sort_children()

@@ -6,19 +6,39 @@ from scipy import optimize
 from lasso_path_utils import calc_hit_cand, calc_hit_cand_selection
 from ..mp_utils import calc_B_y_beta, calc_B_y_beta_selection
 
+def create_children_lars(tiling_element, beta_min, beta_max):
+    additional_indices, boundary_parameters, used_signs = \
+                aux_create_children_lars(tiling_element.support,
+                                         tiling_element.sign_pattern,
+                                         beta_min,
+                                         beta_max,
+                                         tiling_element.options["env_minimiser"],
+                                         tiling_element.svdAAt_U,
+                                         tiling_element.svdAAt_S,
+                                         tiling_element.A,
+                                         tiling_element.y)
+    children = lars_post_process_children(additional_indices,
+                                          boundary_parameters,
+                                          used_signs,
+                                          tiling_element.support,
+                                          tiling_element.sign_pattern)
+    children.sort(key=lambda x: x[0][1]) # Sort by maximal beta parameter
+    return children
 
-def create_children_lars(support, signum, beta_min, beta_max,
-                         minimiser, svdAAt_U, svdAAt_S, A, y,
-                         additional_indices=None,
-                         used_signs=None,
-                         boundary_parameters=None,
-                         hit_candidates_min=None,
-                         used_signs_min=None,
-                         order_min=None,
-                         hit_candidates_max=None,
-                         used_signs_max=None,
-                         order_max=None,
-                         neglect_entries=None):
+
+def aux_create_children_lars(support, signum, beta_min, beta_max,
+                             minimiser, svdAAt_U, svdAAt_S, A, y,
+                             additional_indices=None,
+                             used_signs=None,
+                             boundary_parameters=None,
+                             hit_candidates_min=None,
+                             used_signs_min=None,
+                             order_min=None,
+                             hit_candidates_max=None,
+                             used_signs_max=None,
+                             order_max=None,
+                             neglect_entries=None):
+
     def get_all_hit_cand(beta):
         B_beta, y_beta = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta)
         return calc_hit_cand(B_beta, y_beta, support, signum)
@@ -44,8 +64,10 @@ def create_children_lars(support, signum, beta_min, beta_max,
     if additional_indices is None:
         hit_candidates_max, used_signs_max = get_all_hit_cand(beta_max)
         hit_candidates_min, used_signs_min = get_all_hit_cand(beta_min)
-        # Neglect entries that have a minus value either at boun_at_max or
-        # at boun_at_min
+        # If our heuristical assumption does not hold, it may be that the KKT
+        # first KKT condition is not satisfied. In this case it is more robust
+        # to additionally make this query and neglect entries smaller zero.
+        # However, this may only happens if our assumption is violated.
         neglect_entries = np.where(np.logical_or(hit_candidates_min < 0,
                                          hit_candidates_max < 0))[0]
         hit_candidates_min[neglect_entries] = -1.0
@@ -107,36 +129,36 @@ def create_children_lars(support, signum, beta_min, beta_max,
         hit_candidates_mid[neglect_entries] = -1.0
         order_mid = np.argsort(hit_candidates_mid)
         if order_mid[-1] != order_max[-1]:
-            create_children_lars(support, signum, beta_mid, beta_max,
-                               minimiser, svdAAt_U, svdAAt_S, A, y,
-                               additional_indices=additional_indices,
-                               used_signs=used_signs,
-                               boundary_parameters=boundary_parameters,
-                               hit_candidates_min=hit_candidates_mid,
-                               used_signs_min=used_signs_mid,
-                               order_min=order_mid,
-                               hit_candidates_max=hit_candidates_max,
-                               used_signs_max=used_signs_max,
-                               order_max=order_max,
-                               neglect_entries=neglect_entries)
+            aux_create_children_lars(support, signum, beta_mid, beta_max,
+                                     minimiser, svdAAt_U, svdAAt_S, A, y,
+                                     additional_indices=additional_indices,
+                                     used_signs=used_signs,
+                                     boundary_parameters=boundary_parameters,
+                                     hit_candidates_min=hit_candidates_mid,
+                                     used_signs_min=used_signs_mid,
+                                     order_min=order_mid,
+                                     hit_candidates_max=hit_candidates_max,
+                                     used_signs_max=used_signs_max,
+                                     order_max=order_max,
+                                     neglect_entries=neglect_entries)
         if order_mid[-1] != order_min[-1]:
-            create_children_lars(support, signum, beta_min, beta_mid,
-                               minimiser, svdAAt_U, svdAAt_S, A, y,
-                               additional_indices=additional_indices,
-                               used_signs=used_signs,
-                               boundary_parameters=boundary_parameters,
-                               hit_candidates_min=hit_candidates_min,
-                               used_signs_min=used_signs_min,
-                               order_min=order_min,
-                               hit_candidates_max=hit_candidates_mid,
-                               used_signs_max=used_signs_mid,
-                               order_max=order_mid,
-                               neglect_entries=neglect_entries)
+            aux_create_children_lars(support, signum, beta_min, beta_mid,
+                                     minimiser, svdAAt_U, svdAAt_S, A, y,
+                                     additional_indices=additional_indices,
+                                     used_signs=used_signs,
+                                     boundary_parameters=boundary_parameters,
+                                     hit_candidates_min=hit_candidates_min,
+                                     used_signs_min=used_signs_min,
+                                     order_min=order_min,
+                                     hit_candidates_max=hit_candidates_mid,
+                                     used_signs_max=used_signs_mid,
+                                     order_max=order_mid,
+                                     neglect_entries=neglect_entries)
     return additional_indices, boundary_parameters, used_signs
 
 def lars_post_process_children(additional_indices, boundary_parameters,
         used_signs, old_support, old_signum):
-    """ Takes the results of 'create_children_lars' method and translates them
+    """ Takes the results of 'aux_create_children_lars' method and translates them
     into a python list of tuples. Each tuple is related to a new tiling element
     and thus contains the following options:
     0 - minimal parameters: Tuple (alpha_min, beta_min) related to a parameter
