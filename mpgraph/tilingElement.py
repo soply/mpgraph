@@ -9,9 +9,7 @@ __author__ = "Timo Klock"
 import numpy as np
 
 from create_children.create_children_lars import create_children_lars
-from create_children.create_children_lasso import (create_children_lasso,
-                                                   lasso_children_merge,
-                                                   lasso_post_process_children)
+from create_children.create_children_lasso import create_children_lasso
 
 class TilingElement(object):
     """ An object of the class TilingElement forms a single tile of the support
@@ -181,9 +179,36 @@ class TilingElement(object):
                     return False
             return True
 
-
-
     def find_children(self, beta_min=None, beta_max=None):
+        """ Method to find children of the given tiling element inside the given
+        range (beta_min, beta_max). This method calls, according to the specified
+        mode, a method to find children. Afterwards the children are added
+        tentatively to this tiling element, therefore an additional tiling
+        merging operation should be called after this function has been used.
+        To read about the different methods of finding children, we refer to the
+        respective files in the 'create_children' folder.
+
+        Parameters
+        ------------
+        beta_min : python double
+            Lower boundary of the range of beta's
+
+        beta_max : python double
+            Upper boundary of the range of beta's
+
+        Returns
+        -----------
+        Adds the new children (ie. the related, newly created tiling elements)
+        tentatively to this tiling element. Returns a list with all created
+        tiling elements.
+
+        Remarks
+        -----------
+        Available modes:
+            -'LASSO': Using the Lasso-path algorithm to create the tiling
+            -'LARS': Using the LAR(S) algorithm to create the tiling, ie. the
+                     Lasso-path algorithm with neglecting dropping of indices.
+        """
         if beta_min is None:
             beta_min = self.beta_min
         if beta_max is None:
@@ -191,44 +216,7 @@ class TilingElement(object):
         if self.options["mode"] == "LARS" or self.parents is None:
             children = create_children_lars(self, beta_min, beta_max)
         elif self.options["mode"] == "LASSO":
-            children = []
-            # If this tiling element has different parents, we have to iterate
-            # through these tilings separately because the recently added
-            # component from parent to child changed then.
-            for parent in self.parents:
-                # Checks for overlap
-                if (parent[1] - beta_max < -1e-14 and
-                        beta_min - parent[2] < -1e-14):
-                    # Get entry that last changed
-                    last_entry_changed = np.setxor1d(self.support, parent[0].support)
-                    assert len(last_entry_changed) == 1
-                    last_entry_changed = last_entry_changed[0]
-                    # Get sign to the last entry that changed
-                    if last_entry_changed in self.support:
-                        sign_last_entry_changed = self.sign_pattern[np.where(
-                                                    self.support == last_entry_changed)[0][0]]
-                    elif last_entry_changed in parent[0].support:
-                        sign_last_entry_changed = parent[0].sign_pattern[np.where(
-                                                    parent[0].support == last_entry_changed)[0][0]]
-                    else:
-                        raise RuntimeError("Can not find sign to the last changed entry.")
-                    additional_indices, boundary_parameters, used_signs = \
-                        create_children_lasso(self.support, self.sign_pattern,
-                                              np.maximum(beta_min, parent[1]),  # beta_min
-                                              np.minimum(beta_max, parent[2]),  # beta_max
-                                              self.options["env_minimiser"],
-                                              self.svdAAt_U, self.svdAAt_S, self.A,
-                                              self.y,
-                                              last_entry_changed,
-                                              sign_last_entry_changed,
-                                              tiling_element=self)
-                    children.extend(lasso_post_process_children(additional_indices,
-                                                                boundary_parameters,
-                                                                used_signs, self.support,
-                                                                self.sign_pattern))
-            children.sort(key=lambda x: x[0][1])
-            children = lasso_children_merge(children)
-
+            children = create_children_lasso(self, beta_min, beta_max)
         elif self.options["mode"] == "TEST":
             # For debugging and testing only
             children = self.options["test_iterator"].next()
