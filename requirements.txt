@@ -1,0 +1,27 @@
+numpy==1.11.1
+scipy==0.18.1
+tabulate==0.7.5
+pykrylov==0.2
+matplotlib==1.5.3
+
+# For macosx user: Change matplotlib backend in matplotlibrc config file to
+# 'TkAgg'
+
+
+
+# CHANGES THAT HAVE TO BE APPLIED TO PYKRYLOV:
+#
+# In file lsmr.py:
+
+# Add lines in l426:
+# if normr == 0:
+#    normr = 1e-16
+
+# Change l226 to:
+# Nv = A.T.dot(u)
+
+# Change l313 to:
+# Mu = A.dot(v) - alpha * Mu
+
+# Change l324 to:
+# Nv = A.T.dot(u) - beta * Nv
