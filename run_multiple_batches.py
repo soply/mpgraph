@@ -8,8 +8,8 @@ import getopt
 import os
 import sys
 
-from mp_graph.run_multiple_batches import run_numerous_multiple_constellations
-from mp_graph.run_batch import print_meta_results
+from mpgraph.run_batch import print_meta_results
+from mpgraph.run_multiple_batches import run_numerous_multiple_constellations
 
 
 def main(argv, problem):
@@ -78,26 +78,27 @@ def main(argv, problem):
 
 if __name__ == "__main__":
     tiling_options = {
-        'verbose': 1,
+        'verbose': 2,
         'mode': 'LASSO',
         'print_summary': False
     }
     problem = {
-        'tiling_options': tiling_options,
-        'beta_min': 1e-6,
-        'beta_max': 100.0,
-        'upper_bound_tilingcreation': [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 25, 30, 35],
+        'tiling_options': tiling_options, # Options
+        'beta_min': 1e-6, # Lower beta bound
+        'beta_max': 100.0, # Upper beta bound
         'num_tests': 100, # Repititions per fixed experiment
-        'n_measurements': 100, # = m
-        'n_features': 50, # = n
+        'n_measurements': 70, # = m
+        'n_features': 70, # = n
         'sparsity_level': [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 25, 30, 35], # Considered support sizes
+        'upper_bound_tilingcreation': [1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 20, 25, 30, 35], # Sparsity oracle
         'smallest_signal': 1.5, # Lower bound for signal entries. One entry with smallest signal is ensured!
         'largest_signal': 10.0, # Upper bound for signal entries.
         'noise_type_signal': 'uniform_ensured_max', # Uniform sampling of entries of v + maximum will be taken.
         'noise_lev_signal': 0.2, # Bound for absolute of entires of v.
         'noise_type_measurements': 'gaussian', # Does not matter since we have no measurement noise
         'noise_lev_measurements': 0.0, # No measurement noise
-        'random_seed': 123123,
-        'verbosity' : False
+        'random_seed': 78,
+        'verbosity' : False,
+        'sampling_matrix_type' : 'gaussian'
     }
     main(sys.argv[1:], problem)
