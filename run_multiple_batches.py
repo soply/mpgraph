@@ -98,7 +98,8 @@ if __name__ == "__main__":
                1775085596, 2577185085, 2200873120, 3889125543,  777326957,
                3179401608, 1053557694,  732515691,  130610985, 2558742225],
         'verbosity' : False,
-        'sampling_matrix_type' : 'gaussian'
+        'sampling_matrix_type' : 'gaussian',
+        'problem_type' : 'unmixing'
     }
     problem.update({'tiling_options': tiling_options, # Options
                     'beta_min': 1e-6, # Lower beta bound

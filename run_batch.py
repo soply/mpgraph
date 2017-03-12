@@ -81,19 +81,21 @@ if __name__ == "__main__":
         'num_tests': 100,
         'beta_min': 1e-06,
         'beta_max': 100,
-        'upper_bound_tilingcreation': 7,
-        'num_tests': 350, # Repititions per fixed experiment
-        "n_features": 1000,
-        "n_measurements": 250,
-        'sparsity_level': 7, # Considered support sizes
-        'smallest_signal': 1.5, # Lower bound for signal entries. One entry with smallest signal is ensured!
-        'largest_signal': 10.0, # Upper bound for signal entries.
-        'noise_type_signal': 'uniform_ensured_max', # Uniform sampling of entries of v + maximum will be taken.
-        'noise_lev_signal': 0.4, # Bound for absolute of entires of v.
-        'noise_type_measurements': 'gaussian', # Does not matter since we have no measurement noise
-        'noise_lev_measurements': 0.0, # No measurement noise
-        'random_seed': 2558742225,
+        'upper_bound_tilingcreation': 15,
+        'n_measurements': 250,
+        'n_features': 800,
+        'sparsity_level': 15,
+        'smallest_signal': 1.5,
+        'largest_signal': 50.0,
+        'noise_type_signal': 'uniform_ensured_max',
+        'noise_lev_signal': 0.2,
+        'noise_type_measurements': 'gaussian',
+        'noise_lev_measurements': 0.0,
+        'random_seed': 1223445,
         'verbosity' : False,
-        'sampling_matrix_type' : 'prtm_rademacher'
+        'sampling_matrix_type' : 'prtm_gaussian',
+        'pertubation_matrix_type' : 'prtm_gaussian',
+        'pertubation_matrix_level' : 0.05,
+        'problem_type' : 'pertubation'
     }
     main(sys.argv[1:], problem)

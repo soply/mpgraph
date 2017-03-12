@@ -80,24 +80,29 @@ def main(argv, problem):
 if __name__ == "__main__":
     tiling_options = {
         'verbose': 2,
-        'mode': 'LASSO',
-        'print_summary' : True
+        'mode': 'LARS',
+        'print_summary' : False
     }
     problem = {
-        'tiling_options': tiling_options, # Options
-        'beta_min': 1e-6, # Lower beta bound
-        'beta_max': 100.0, # Upper beta bound
-        'n_measurements': 70, # = m
-        'n_features': 70, # = n
-        'sparsity_level': 20, # Considered support sizes
-        'upper_bound_tilingcreation': 20, # Sparsity oracle
-        'smallest_signal': 1.5, # Lower bound for signal entries. One entry with smallest signal is ensured!
-        'largest_signal': 10.0, # Upper bound for signal entries.
-        'noise_type_signal': 'uniform_ensured_max', # Uniform sampling of entries of v + maximum will be taken.
-        'noise_lev_signal': 0.2, # Bound for absolute of entires of v.
-        'noise_type_measurements': 'gaussian', # Does not matter since we have no measurement noise
-        'noise_lev_measurements': 0.0, # No measurement noise
-        'random_seed': 89,
-        'sampling_matrix_type' : 'gaussian'
+        'tiling_options': tiling_options,
+        'num_tests': 100,
+        'beta_min': 1e-06,
+        'beta_max': 100,
+        'upper_bound_tilingcreation': 20,
+        'n_measurements': 250,
+        'n_features': 800,
+        'sparsity_level': 15,
+        'smallest_signal': 1.5,
+        'largest_signal': 50.0,
+        'noise_type_signal': 'uniform_ensured_max',
+        'noise_lev_signal': 0.2,
+        'noise_type_measurements': 'gaussian',
+        'noise_lev_measurements': 0.0,
+        'random_seed': 1223445,
+        'verbosity' : False,
+        'sampling_matrix_type' : 'gaussian',
+        'pertubation_matrix_type' : 'gaussian',
+        'pertubation_matrix_level' : 0.05,
+        'problem_type' : 'pertubation'
     }
     main(sys.argv[1:], problem)
