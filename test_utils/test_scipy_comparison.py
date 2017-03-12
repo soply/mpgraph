@@ -4,7 +4,7 @@ import numpy as np
 from sklearn import linear_model
 
 from mpgraph.mp_utils import calc_B_y_beta
-from mpgraph.problem_factory.synthetic_random_data import \
+from mpgraph.problem_factory.unmixing_problem import \
     create_specific_problem_data_from_problem
 from mpgraph.tiling import wrapper_create_tiling
 
@@ -24,7 +24,8 @@ problem = {
     'noise_type_measurements': 'gaussian',
     'noise_lev_measurements': 0.0,
     'random_seed' : 1,
-    'betas_to_test' : np.linspace(2 * 1e-6, 0.95 * 100.0, 10)
+    'betas_to_test' : np.linspace(2 * 1e-6, 0.95 * 100.0, 10),
+    'sampling_matrix_type' : 'gaussian'
 }
 
 class CompareToScipyLARSTestCase(unittest.TestCase):
