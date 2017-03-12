@@ -20,7 +20,7 @@ def main(argv, problem):
         Example: argv = ['i', 'test', 'v', 'true', 'p', 'graph-layered']
 
     problem : python dictionary that contains the run characteristics.
-        See problem_factory/synthetic_random_data docs for details on the run
+        See problem_factory/ docs for details on the run
         characteristics.
     """
     identifier = ''

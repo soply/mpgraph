@@ -21,7 +21,7 @@ def main(argv, problem):
         Example: argv = ['t', 'run', 'i', 'test123']
 
     problem : python dictionary that contains the run characteristics.
-        See problem_factory/synthetic_random_data docs for details on the run
+        See problem_factory/ docs for details on the run
         characteristics.
     """
     identifier = ''
@@ -73,7 +73,7 @@ def main(argv, problem):
 if __name__ == "__main__":
     tiling_options = {
         'verbose': 2,
-        'mode': 'LASSO',
+        'mode': 'LARS',
         'print_summary' : False
     }
     problem = {
@@ -81,19 +81,19 @@ if __name__ == "__main__":
         'num_tests': 100,
         'beta_min': 1e-06,
         'beta_max': 100,
-        'upper_bound_tilingcreation': 35,
-        'num_tests': 100, # Repititions per fixed experiment
-        "n_features": 800,
+        'upper_bound_tilingcreation': 7,
+        'num_tests': 350, # Repititions per fixed experiment
+        "n_features": 1000,
         "n_measurements": 250,
-        'sparsity_level': 35, # Considered support sizes
+        'sparsity_level': 7, # Considered support sizes
         'smallest_signal': 1.5, # Lower bound for signal entries. One entry with smallest signal is ensured!
         'largest_signal': 10.0, # Upper bound for signal entries.
         'noise_type_signal': 'uniform_ensured_max', # Uniform sampling of entries of v + maximum will be taken.
-        'noise_lev_signal': 0.2, # Bound for absolute of entires of v.
+        'noise_lev_signal': 0.4, # Bound for absolute of entires of v.
         'noise_type_measurements': 'gaussian', # Does not matter since we have no measurement noise
         'noise_lev_measurements': 0.0, # No measurement noise
         'random_seed': 2558742225,
         'verbosity' : False,
-        'sampling_matrix_type' : 'gaussiana'
+        'sampling_matrix_type' : 'prtm_rademacher'
     }
     main(sys.argv[1:], problem)

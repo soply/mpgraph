@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-from problem_factory.synthetic_random_data import \
+from problem_factory.unmixing_problem import \
     create_specific_problem_data_from_problem
 from support_selection.snr_based import highest_support_constrained_snr
 from support_selection.layer_based import largest_support_occuring_in_each_layer
