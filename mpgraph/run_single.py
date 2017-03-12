@@ -9,7 +9,7 @@ import os
 
 import numpy as np
 
-from problem_factory.synthetic_random_data import \
+from problem_factory.unmixing_problem import \
     create_specific_problem_data_from_problem
 from support_selection.snr_based import highest_support_constrained_snr
 from tiling import wrapper_create_tiling
