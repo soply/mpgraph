@@ -69,7 +69,7 @@ def divideAndConquer(support, signum, beta_min, beta_max,
                      order_max=None,
                      neglect_entries=None):
     """ Method that conducts the hard work to find the children of a tile that
-    is represented by the first input parameters. Recursive method that calles
+    is represented by the first input parameters. Recursive method that calls
     itself over and over again in a divide-and-conquer manner. This explains
     all the 'None' arguments.
 
@@ -173,7 +173,6 @@ def divideAndConquer(support, signum, beta_min, beta_max,
     functions. Although this is seen very rarely, it can happen if the
     assumption does not hold.
     """
-
     def get_all_hit_cand(beta):
         B_beta, y_beta = calc_B_y_beta(A, y, svdAAt_U, svdAAt_S, beta)
         return calc_hit_cand(B_beta, y_beta, support, signum)
@@ -214,9 +213,9 @@ def divideAndConquer(support, signum, beta_min, beta_max,
         boundary_parameters = []
         boundary_parameters.append((hit_candidates_max[order_max[-1]], beta_max))
         boundary_parameters.append((hit_candidates_min[order_min[-1]], beta_min))
-
     if order_min[-1] == order_max[-1]:
         pass
+    # elif candidates_min[order_min[-1]
     elif order_min[-1] == order_max[-2] and \
             order_min[-2] == order_max[-1]:
         # Search for crossing
@@ -239,13 +238,18 @@ def divideAndConquer(support, signum, beta_min, beta_max,
             fminfun = optimize.bisect
         if minimiser in ["scipy_brentq", "scipy_brenth",
                          "scipy_ridder", "scipy_bisect"]:
-            beta_cross, res = fminfun(candidate_difference, beta_min,
-                                      beta_max, xtol=1e-12,
-                                      args=(order_max[-1], order_min[-1]),
-                                      full_output=True)
-            nfev = res.function_calls
-            fun = 1e-12
-            success = res.converged
+            # If two candidates are form the maximum envelope together, ie. our
+            # assumptions are not satisfied.
+            if np.abs(hit_candidates_min[order_min[-1]]-hit_candidates_max[order_max[-1]]) < 1e-14:
+                beta_cross = 0.5 * (beta_min + beta_max)
+                success = True
+            else:
+                beta_cross, res = fminfun(candidate_difference, beta_min,
+                                          beta_max, xtol=1e-12,
+                                          args=(order_max[-1], order_min[-1]),
+                                          full_output=True)
+                nfev = res.function_calls
+                success = res.converged
         if success:
             hit_candidates_cross, used_signs_cross = get_all_hit_cand(beta_cross)
             hit_candidates_cross[neglect_entries] = -1.0
@@ -293,6 +297,18 @@ def divideAndConquer(support, signum, beta_min, beta_max,
         # Bisection step
         beta_mid = 0.5 * (beta_min + beta_max)
         hit_candidates_mid, used_signs_mid = get_all_hit_cand(beta_mid)
+        # For the same reason as before, we check for further hit_candidates
+        # that exihibit discontinuties by this query. Since we zone in on the
+        # discontinuity over time, we will neglect the entry at some point and
+        # move on without the entry.
+        new_neglected_entries = np.where(hit_candidates_mid < -1.0)[0]
+        if len(new_neglected_entries) > 0:
+            neglect_entries = np.append(neglect_entries,
+                                        new_neglected_entries)
+            hit_candidates_min[neglect_entries] = -1.0
+            hit_candidates_max[neglect_entries] = -1.0
+            order_max = np.argsort(hit_candidates_max)
+            order_min = np.argsort(hit_candidates_min)
         hit_candidates_mid[neglect_entries] = -1.0
         order_mid = np.argsort(hit_candidates_mid)
         if order_mid[-1] != order_max[-1]:
