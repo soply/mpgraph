@@ -25,7 +25,8 @@ problem = {
     'noise_lev_measurements': 0.0,
     'random_seed' : 1,
     'betas_to_test' : np.linspace(2 * 1e-6, 0.95 * 100.0, 10),
-    'sampling_matrix_type' : 'gaussian'
+    'sampling_matrix_type' : 'gaussian',
+    'problem_type' : 'unmixing',
 }
 
 class CompareToScipyLARSTestCase(unittest.TestCase):

@@ -51,6 +51,9 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                  tiling creation for a specific tiling element,
                                  we will not search for further childs of such
                                  a tiling element.
+    sparsity_oracle_in_ranking (optional) | If True we perform the ranking by using
+                                            the correct support size as a sparsity
+                                            oracle.
 
     For creation of random data (check the respective files to see what options
     for specific keys are available, and what specific options are used for).
@@ -113,6 +116,10 @@ def run_numerous_one_constellation(problem, results_prefix = None):
     beta_max = problem["beta_max"]
     upper_bound_tilingcreation = problem["upper_bound_tilingcreation"]
     problem_type = problem["problem_type"]
+    if problem.get('sparsity_oracle_in_ranking', False):
+        sparsity_oracle_ranking = problem['sparsity_level']
+    else:
+        sparsity_oracle_ranking = None
     for i in range(problem['num_tests']):
         print "\nRun example {0}/{1}".format(i + 1, problem['num_tests'])
         random_state = np.random.get_state()
@@ -136,7 +143,8 @@ def run_numerous_one_constellation(problem, results_prefix = None):
             elapsed_time_tiling = tiling.elapsed_time_tiling
             ranking, best_tilingelement, elapsed_time_selection = \
                 highest_support_constrained_snr(tiling, show_table=False,
-                                                target_support=target_support)
+                                                target_support=target_support,
+                                                sparsity_oracle=sparsity_oracle_ranking)
             # Postprocessing of results
             # Total elapsed time
             elapsed_time = elapsed_time_svd + elapsed_time_tiling + \

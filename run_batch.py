@@ -78,7 +78,7 @@ if __name__ == "__main__":
     }
     problem = {
         'tiling_options': tiling_options,
-        'num_tests': 100,
+        'num_tests': 20,
         'beta_min': 1e-06,
         'beta_max': 100,
         'upper_bound_tilingcreation': 15,
@@ -86,16 +86,17 @@ if __name__ == "__main__":
         'n_features': 800,
         'sparsity_level': 15,
         'smallest_signal': 1.5,
-        'largest_signal': 50.0,
-        'noise_type_signal': 'uniform_ensured_max',
-        'noise_lev_signal': 0.2,
+        'largest_signal': 50.5,
         'noise_type_measurements': 'gaussian',
         'noise_lev_measurements': 0.0,
+        'noise_type_signal': 'gaussian',
+        'noise_lev_signal': 0.2,
         'random_seed': 1223445,
         'verbosity' : False,
         'sampling_matrix_type' : 'prtm_gaussian',
         'pertubation_matrix_type' : 'prtm_gaussian',
         'pertubation_matrix_level' : 0.05,
-        'problem_type' : 'pertubation'
+        'problem_type' : 'unmixing',
+        'sparsity_oracle_in_ranking' : True,
     }
     main(sys.argv[1:], problem)

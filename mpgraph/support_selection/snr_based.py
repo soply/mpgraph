@@ -7,8 +7,9 @@ from tabulate import tabulate
 from ..mp_utils import approximate_solve_mp_fixed_support
 
 
-def highest_support_constrained_snr(tiling, show_table=False,
-                                    target_support=None):
+def highest_support_constrained_snr(tiling, show_table = False,
+                                    target_support = None,
+                                    sparsity_oracle = None):
     """ Method to rank the supports connected to a reconstructed tiling by
     calculating the signal to noise ratio solely based on the support. In
     particular, this method calculates approximative solutions u_I and v_I
@@ -33,6 +34,11 @@ def highest_support_constrained_snr(tiling, show_table=False,
         specific data has been created) and the symmetric difference is
         stored into the table.
 
+    sparsity_oracle (optional, default None): integer
+        An oracle on the support size. If given, the highest ranked
+        support of all supports with the oracle-given support size will
+        be evaluated for the highest-ranked support (instead of all).
+
     Returns
     -----------------
     table: Numpy array, shape (n_tilingelements, 6 or 7)
@@ -46,7 +52,8 @@ def highest_support_constrained_snr(tiling, show_table=False,
             6 (optional) : Symmetric difference to target support
 
     best_tilingelement : Tilingelement of the tiling that scores the highest
-        signal to noise ratio.
+        signal to noise ratio (if sparsity oracle is given, it is the highest
+        scoring tiling amongst the ones that fit the oracle).
 
     elapsed_time : Time necessary to perform the ranking.
 
@@ -60,6 +67,11 @@ def highest_support_constrained_snr(tiling, show_table=False,
     tiling_elements = tiling.root_element.bds_order()
     # Remove root element
     del tiling_elements[tiling.root_element]
+
+    # Filter if sparsity oracle is given
+    if sparsity_oracle is not None:
+        tiling_elements = {k: v for k, v in tiling_elements.iteritems()
+                            if len(k.support) == sparsity_oracle}
     if target_support is not None:
         table = np.zeros((len(tiling_elements.keys()), 7))
     else:
