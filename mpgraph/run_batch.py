@@ -8,6 +8,7 @@ import json
 import os
 
 import numpy as np
+from tabulate import tabulate
 
 from problem_factory.pertubation_problem import \
     create_specific_problem_data_from_problem as create_data_pertubation
@@ -88,8 +89,8 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                and sampling matrix, ie. ||E||_2/||A||_2.
 
     Method will save the results of each single run to a file called i_data.npz
-    in the folder 'results_batch/<identifier>/', or if a 'results_prefix' is given, it
-    will be stored in '<results_prefix>/<identifier>/'.
+    in the folder 'results_batch/<identifier>/', or if a 'results_prefix' is
+    given, it will be stored in '<results_prefix>/<identifier>/'.
     If the file already exists, the specific run will be skipped (this is
     useful if we want to stop a run in the middle and restart it). At the end
     of the run, meta results over all runs are created and stored to a file
@@ -143,8 +144,12 @@ def run_numerous_one_constellation(problem, results_prefix = None):
             elapsed_time_tiling = tiling.elapsed_time_tiling
             ranking, best_tilingelement, elapsed_time_selection = \
                 highest_support_constrained_snr(tiling, show_table=False,
-                                                target_support=target_support,
-                                                sparsity_oracle=sparsity_oracle_ranking)
+                                        target_support=target_support,
+                                        sparsity_oracle=sparsity_oracle_ranking)
+            # Get number of supports per support size
+            n_supports_per_size = np.zeros(upper_bound_tilingcreation)
+            for j in range(upper_bound_tilingcreation):
+                n_supports_per_size[j] = len(np.where(tab[:,5] == j)[0])
             # Postprocessing of results
             # Total elapsed time
             elapsed_time = elapsed_time_svd + elapsed_time_tiling + \
@@ -160,14 +165,15 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 symmetric_difference=ranking[-1, 6],
                                 support=best_tilingelement.support,
                                 tiling_contains_real=tiling_contains_real,
-                                highest_ranked_is_real=highest_ranked_is_real)
+                                highest_ranked_is_real=highest_ranked_is_real,
+                                n_supports_per_size=n_supports_per_size)
     create_meta_results(resultdir)
     print_meta_results(resultdir)
 
 
 def create_meta_results(folder):
     """ Method analyses the results of a batch of runs for a single
-    constellations. The files that correspond to these runs should be
+    constellation. The files that correspond to these runs should be
     contained in the given folder and be named as
 
         folder + <num_run> + _data.npz.
@@ -176,13 +182,16 @@ def create_meta_results(folder):
     contain the information as saved for example in the
     'run_numerous_one_constellation' method. The meta results consist of
 
-    0 : Whether or not the chosen support by the support selection method is
-        correct.
-    1 : Symmetric difference.
-    2 : Flag that is True if the tiling contains the 'real support', False else.
-    3 : Flag that is True if the highest ranked support is the 'real support',
-        False else.
-    4 : Totally elapsed time.
+    correct_support_selection : Whether or not the chosen support by the support
+                                selection method is correct.
+    symmetric_difference : Symmetric difference.
+    tiling_contains_real : Flag that is True if the tiling contains the
+                           'real support', False else.
+    highest_ranked_is_real : Flag that is True if the highest ranked support is
+                             the 'real support', False else.
+    elapsed_time : Totally elapsed time.
+    n_supports_per_size : Matrix with number of different supports per support
+                        size per experiment.
 
     They are stored in the given folder and named as meta.txt.
 
@@ -193,8 +202,7 @@ def create_meta_results(folder):
 
     Remarks
     ------------
-    -Format of meta results is one run per column, 5 rows corresponding to the
-     above mentioned characteristics.
+    -Format of meta results is a dictionary with the above mentioned keys.
     """
     correct_support_selection = []
     symmetric_difference = []
@@ -204,6 +212,12 @@ def create_meta_results(folder):
     i = 0
     while os.path.exists(folder + str(i) + "_data.npz"):
         datafile = np.load(folder + str(i) + "_data.npz")
+        n_supports_per_size_iter = datafile['n_supports_per_size']
+        if i == 0:
+            n_supports_per_size = n_supports_per_size_iter
+        else:
+            n_supports_per_size = np.vstack((n_supports_per_size,
+                                            n_supports_per_size_iter))
         correct_support_selection.append((datafile['symmetric_difference'] == 0))
         symmetric_difference.append(datafile['symmetric_difference'])
         tiling_contains_real.append(datafile['tiling_contains_real'])
@@ -215,7 +229,8 @@ def create_meta_results(folder):
                         symmetric_difference=np.array(symmetric_difference),
                         tiling_contains_real=np.array(tiling_contains_real),
                         highest_ranked_is_real=np.array(highest_ranked_is_real),
-                        elapsed_time=elapsed_time)
+                        elapsed_time=elapsed_time,
+                        n_supports_per_size=n_supports_per_size)
 
 def print_meta_results(folder):
     """ Method to print out the meta results to the terminal. The print-out
@@ -227,6 +242,7 @@ def print_meta_results(folder):
     3) Suspicious cases with the failure reason: either the support is not
        found in the tiling at all; or the highest ranked support due to the
        ranking method selects another support.
+    4) Statistics about number of different supports per support sizes.
 
     Parameters
     ------------
@@ -265,3 +281,13 @@ def print_meta_results(folder):
                                                 tiling_does_not_contain_real)
     print "Examples highest ranked support is incorrect {0}".format(
                                                         highest_ranked_wrong)
+    print "\n4) Number of tiling statistics:"
+    n_supports_per_size = meta_results["n_supports_per_size"]
+    summary_table = np.vstack((np.arange(n_supports_per_size.shape[1]),
+                              np.mean(n_supports_per_size, 0)))
+    summary_table = np.vstack((summary_table, np.min(n_supports_per_size, 0)))
+    summary_table = np.vstack((summary_table, np.max(n_supports_per_size, 0)))
+    # Transpose such that data is in the columns
+    summary_table = summary_table.T
+    print "Average number of support per support size:"
+    print tabulate(summary_table, headers=['Size', 'Average #supports', 'Min.', 'Max'])

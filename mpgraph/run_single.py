@@ -131,9 +131,13 @@ def run_single(problem):
     elapsed_time_svd = tiling.elapsed_time_svd
     elapsed_time_tiling = tiling.elapsed_time_tiling
     ranking, best_tilingelement, elapsed_time_selection = \
-    highest_support_constrained_snr(tiling, show_table=True,
-                            target_support=target_support,
-                            sparsity_oracle=sparsity_oracle_ranking)
+                highest_support_constrained_snr(tiling, show_table=True,
+                                        target_support=target_support,
+                                        sparsity_oracle=sparsity_oracle_ranking)
+    # Get number of supports per support size
+    supports_per_size = np.zeros(upper_bound_tilingcreation)
+    for i in range(upper_bound_tilingcreation):
+        supports_per_size[i] = len(np.where(tab[:,5] == i)[0])
     # Postprocessing of results
     # Total elapsed time
     elapsed_time = elapsed_time_svd + elapsed_time_tiling + \
@@ -149,5 +153,6 @@ def run_single(problem):
                         symmetric_difference=ranking[-1, 5],
                         support=best_tilingelement.support,
                         tiling_contains_real=tiling_contains_real,
-                        highest_ranked_is_real=highest_ranked_is_real)
+                        highest_ranked_is_real=highest_ranked_is_real,
+                        supports_per_size=supports_per_size)
     return tiling, best_tilingelement
