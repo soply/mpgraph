@@ -17,11 +17,13 @@ matplotlib==1.5.3
 # if normr == 0:
 #    normr = 1e-16
 
-# Change l226 to:
+# Change l224 to:
 # Nv = A.T.dot(u)
 
-# Change l313 to:
+# Change l311 to:
 # Mu = A.dot(v) - alpha * Mu
 
-# Change l324 to:
+# Change l322 to:
 # Nv = A.T.dot(u) - beta * Nv
+
+# Changes can also be found at github in my fork of the repo.
