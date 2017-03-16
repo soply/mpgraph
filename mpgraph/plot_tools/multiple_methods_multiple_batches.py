@@ -542,11 +542,13 @@ def success_plus_highest_ranked_vs_measurement_noise(basefolder, identifier, met
     # Load problem data
     with open(folder_names[methods[0]] + 'log.txt') as data_file:
         problem = json.load(data_file)
-    measurement_noises = problem['noise_lev_measurements']
-    success_rates = np.zeros((len(measurement_noises), len(methods)))
-    highest_ranked_real_rates = np.zeros((len(measurement_noises), len(methods)))
+    smallest_signal_entry = problem['smallest_signal']
+    measurement_noises = np.array(problem['noise_lev_measurements'])
+    measurement_SNR = measurement_noises/smallest_signal_entry
+    success_rates = np.zeros((len(measurement_SNR), len(methods)))
+    highest_ranked_real_rates = np.zeros((len(measurement_SNR), len(methods)))
     for i, method in enumerate(methods):
-        for j in range(len(measurement_noises)):
+        for j in range(len(measurement_SNR)):
             meta_results = np.load(folder_names[method] + str(j) +\
                                       "/meta.npz")
             num_tests = problem['num_tests']
@@ -555,14 +557,14 @@ def success_plus_highest_ranked_vs_measurement_noise(basefolder, identifier, met
             highest_ranked_real_rates[j, i] = np.sum(
                         meta_results["highest_ranked_is_real"])/float(num_tests)
     fig = plt.figure(figsize = (16,9))
-    plt.semilogx(measurement_noises, success_rates, linewidth = 3.0)
-    plt.semilogx(measurement_noises, highest_ranked_real_rates, marker = "o",
+    plt.semilogx(measurement_SNR, success_rates, linewidth = 3.0)
+    plt.semilogx(measurement_SNR, highest_ranked_real_rates, marker = "o",
                  linewidth = 3.0)
     legend = ["Success Tiling (" + method + ")" for method in methods]
     legend = legend+["Success Ranking (" + method + ")" for method in methods]
     plt.legend(legend, loc = leg_loc, ncol = 1)
     if xlabel is None:
-        plt.xlabel(r'Measurement noise variance $\sigma^2$.')
+        plt.xlabel(r'$\sigma^2/c_{\rm{min}}$')
     else:
         plt.xlabel(xlabel)
     if ylabel is None:
