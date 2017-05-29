@@ -8,6 +8,11 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
+from scipy.misc import comb
+
+__color_rotation__ = ['b','g','r','c','m','y','k']
+__marker_rotation__ = ['o', 'H', 's', '^', 'None', '+', '.', 'D', 'x']
+__linestyle_rotation__ = ['-', '--', ':', '-.']
 
 def success_vs_sparsity_level(basefolder, identifier, methods, title = None,
                               xlabel = None, ylabel = None, save_as = None,
@@ -576,6 +581,229 @@ def success_plus_highest_ranked_vs_measurement_noise(basefolder, identifier, met
     else:
         plt.title(title)
     plt.ylim([-0.05, 1.05])
+    if save_as is not None:
+        fig.savefig(save_as)
+    plt.show()
+
+def n_supports_at_largest_vs_sparsity_level(basefolder, identifier, methods, title = None,
+                                            xlabel = None, ylabel = None, save_as = None,
+                                            leg_loc = 'lower right',
+                                            prescribed_legend = None, legend_cols = 2,
+                                            legend_fontsize = 20.,
+                                            plot_handles = None):
+    """ Creates a plot with the number of found supports at the highest sparsity
+    level parameterised over experiment with different vs sparsity levels plot.
+    Sparsity level is on x axis and success rate on y. The method akes a list of
+    methods as an input, so several methods can be compared.  The data is assumed
+    to lie at
+
+    '<basefolder>/<method>_<identifier>/<ctr_sparsity_level>/meta.npz"
+
+    where <ctr_sparsity_level> is a counter from 0 to the number of different
+    sparsity levels that can be found.
+
+    Parameters
+    -------------
+    basefolder : python string
+        Basefolder of files.
+
+    identifier : python string
+        Identifier inside basefolder.
+
+    methods : python list of strings
+        Python list of strings with method to which the solution has been
+        calculated. E.g. ['mp_LARS', 'mp_LASSO'] or one of them.
+
+    title, optional : python string
+        Optinal title of the plot.
+
+    xlabel, optional : python string
+        Optional xlabel of the plot.
+
+    ylabel, optional : python string
+        Optinal ylabel of the plot.
+
+    save_as, optional : python string
+        If given, saves the figure to the file provided under 'save_as'.
+
+    leg_loc, optional : python string
+        Location of legend, using matplotlib keywords.
+
+    prescribed_legend : list of python strings
+        Prescribed legend instead of automatically created legend
+
+    legend_cols : int
+        Columns in the legend
+
+    legend_fontsize : int
+        Fontsize of the legend
+
+    plot_handles : matplotlib figure and axis objects
+        In case, an existing plot should be extended we can give the figure and
+        axis handle.
+
+        Example:
+            fig, ax = plt.figure()
+            plot_handles = (fig, ax)
+    """
+    folder_names = {}
+    for method in methods:
+        folder_names[method] = basefolder + "/" + method + "_" + identifier + "/"
+    # Load problem data
+    with open(folder_names[methods[0]] + 'log.txt') as data_file:
+        problem = json.load(data_file)
+    sparsity_levels = problem['sparsity_level']
+    n_supports = np.zeros((len(sparsity_levels), len(methods)))
+    for i, method in enumerate(methods):
+        for j, sparsity_level in enumerate(sparsity_levels):
+            meta_results = np.load(folder_names[method] + str(j) +\
+                                      "/meta.npz")
+            num_tests = problem['num_tests']
+            n_supports_p_sparsity_level = np.sum(meta_results["n_supports_per_size"],
+                                                 axis = 0)/float(num_tests)
+            n_supports_last_sparsity_level = n_supports_p_sparsity_level[-1]
+            n_supports[j, i] = n_supports_last_sparsity_level
+    if plot_handles is None:
+        fig = plt.figure(figsize = (16,9))
+        ax = plt.gca()
+        cycle_offset = 0
+    else:
+        fig, ax = plot_handles
+        cycle_offset = len(ax.lines)
+    for j in range(n_supports.shape[1]):
+        ax.plot(sparsity_levels, n_supports[:,j], linewidth = 3.0,
+                 c = __color_rotation__[(j+5+cycle_offset) % len(__color_rotation__)],
+                 linestyle = __linestyle_rotation__[(j+5+cycle_offset) % len(__linestyle_rotation__)],
+                 marker = __marker_rotation__[(j+5+cycle_offset) % len(__marker_rotation__)],
+                 markersize = 15.0)
+    if prescribed_legend is None:
+        ax.legend(methods, loc = leg_loc, ncol = legend_cols,
+                   fontsize = legend_fontsize)
+    else:
+        ax.legend(prescribed_legend, loc = leg_loc, ncol = legend_cols,
+                   fontsize = legend_fontsize)
+    if xlabel is None:
+        ax.set_title(r'Support size')
+    else:
+        ax.set_xlabel(xlabel)
+    if ylabel is None:
+        ax.set_ylabel(r'Average number of tiles at last iteration')
+    else:
+        ax.set_ylabel(ylabel)
+    if title is None:
+        ax.set_title(r'Average number of tiles at last iteration vs support size')
+    else:
+        ax.set_title(title)
+    if save_as is not None:
+        fig.savefig(save_as)
+    if plot_handles is None:
+        ax.set_ylim([0.95, 1.1 * np.max(n_supports)])
+        plt.show()
+
+def n_supports_vs_tiling_size(basefolder, identifier, methods, varying_parameter,
+                              title = None, xlabel = None, ylabel = None,
+                              save_as = None,  leg_loc = 'lower right',
+                              prescribed_legend = None, legend_cols = 2,
+                              legend_fontsize = 20.0):
+    """ Creates a plot with the average number of tiles per tiling size for each
+    support size. Different curves can be parameterized by some parameter, eg.
+    the noise_level or the signal gap. All involved runs should contain tilings
+    that have been calculated up to the same support size. The files should be
+    located in the folder
+
+    '<basefolder>/<method>_<identifier>/<ctr_sparsity_level>/meta.npz"
+
+    where <ctr_sparsity_level> is a counter from 0 to the number of different
+    sparsity levels that can be found.
+
+    Parameters
+    -------------
+    basefolder : python string
+        Basefolder of files.
+
+    identifier : python string
+        Identifier inside basefolder.
+
+    methods : python list of strings
+        Python list of strings with method to which the solution has been
+        calculated. E.g. ['mp_LARS', 'mp_LASSO'] or one of them.
+
+    varying_parameter : pyton string
+        Parameter that yield numerous runs, ie. noise_level_signal and so forth,...
+
+    title, optional : python string
+        Optinal title of the plot.
+
+    xlabel, optional : python string
+        Optional xlabel of the plot.
+
+    ylabel, optional : python string
+        Optinal ylabel of the plot.
+
+    save_as, optional : python string
+        If given, saves the figure to the file provided under 'save_as'.
+
+    leg_loc, optional : python string
+        Location of legend, using matplotlib keywords.
+
+    prescribed_legend : list of python strings
+        Prescribed legend instead of automatically created legend
+
+    legend_cols : int
+        Columns in the legend
+
+    legend_fontsize : int
+        Fontsize of the legend
+    """
+    folder_names = {}
+    for method in methods:
+        folder_names[method] = basefolder + "/" + method + "_" + identifier + "/"
+    # Load problem data
+    with open(folder_names[methods[0]] + 'log.txt') as data_file:
+        problem = json.load(data_file)
+    varying_parameters = problem[varying_parameter]
+    n_parameters = len(varying_parameters)
+    if isinstance(problem['upper_bound_tilingcreation'], list):
+        raise RuntimeError("Runs do not have same support size bound: {0}".format(
+                n_supports))
+    n_support_sizes = np.arange(problem['upper_bound_tilingcreation'])
+    n_avg_supports = np.zeros((problem['upper_bound_tilingcreation'],
+                               len(methods) * len(varying_parameters)))
+    legend_entries = []
+    for i, method in enumerate(methods):
+        for j, parameter in enumerate(varying_parameters):
+            meta_results = np.load(folder_names[method] + str(j) + "/meta.npz")
+            num_tests = problem['num_tests']
+            n_supports_p_sparsity_level = np.sum(meta_results["n_supports_per_size"],
+                                                 axis = 0)/float(num_tests)
+            n_avg_supports[:, i * n_parameters + j] = n_supports_p_sparsity_level
+            legend_entries.append(method + ', para = ' + str(parameter))
+    fig = plt.figure(figsize = (16,9))
+    for j in range(n_avg_supports.shape[1]):
+        plt.plot(n_support_sizes, n_avg_supports[:,j], linewidth = 3.0,
+                c = __color_rotation__[(j+5) % len(__color_rotation__)],
+                linestyle = __linestyle_rotation__[(j+5) % len(__linestyle_rotation__)],
+                marker = __marker_rotation__[(j+5) % len(__marker_rotation__)],
+                markersize = 15.0)
+    if prescribed_legend is None:
+        plt.legend(legend_entries, loc = leg_loc, ncol = legend_cols,
+                   fontsize = legend_fontsize)
+    else:
+        plt.legend(prescribed_legend, loc = leg_loc, ncol = legend_cols,
+                   fontsize = legend_fontsize)
+    if xlabel is None:
+        plt.xlabel(r'Support size')
+    else:
+        plt.xlabel(xlabel)
+    if ylabel is None:
+        plt.ylabel(r'Average number of tiles')
+    else:
+        plt.ylabel(ylabel)
+    if title is None:
+        plt.title(r'Average number of tiles vs support size')
+    else:
+        plt.title(title)
+    plt.ylim([0.95, 1.1 * np.max(n_avg_supports)])
     if save_as is not None:
         fig.savefig(save_as)
     plt.show()
