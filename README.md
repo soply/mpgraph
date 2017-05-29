@@ -8,7 +8,7 @@ Here, the support solution space means that we are interested in all possible su
 
 Concretely, this means the algorithm calculates the mapping 
   alpha, beta -> u_(alpha,beta), v_(alpha, beta) 
-for all choices of (alpha, beta) up to a pre-defined sparsity level and in a pre-defined range [beta_min, beta_max]. In this it a related to the Lasso-path algorithm for the single-penalty Lasso or l1-functional that is able to efficiently calculate the mapping
+for all choices of (alpha, beta) up to a pre-defined sparsity level and in a pre-defined range [beta_min, beta_max]. In this it is related to the Lasso-path algorithm for the single-penalty Lasso or l1-functional that is able to efficiently calculate the mapping
 
   alpha -> u_(alpha) = argmin 1/2 ||Au - y||_2^2 + alpha ||u||_1.
   
