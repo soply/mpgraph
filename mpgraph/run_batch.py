@@ -129,8 +129,12 @@ def run_numerous_one_constellation(problem, results_prefix = None):
         # Creating problem data
         if problem_type == "unmixing":
             A, y, u_real, v_real = create_data_unmixing(problem)
+            signal_to_signal_noise_ratio = np.linalg.norm(A.dot(u_real))/ \
+                                                np.linalg.norm(A.dot(v_real))
         elif problem_type == "pertubation":
             A, y, u_real, E = create_data_pertubation(problem)
+            signal_to_signal_noise_ratio = np.linalg.norm(A.dot(u_real))/ \
+                                                np.linalg.norm(E.dot(u_real))
         else:
             raise RuntimeError("Problem type {0} not recognized. Available {1}".format(
                 problem_type, __available_problem_types__))
@@ -191,8 +195,9 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 highest_ranked_is_real=highest_ranked_is_real,
                                 n_supports_per_size=n_supports_per_size,
                                 prediction_error=prediction_error,
-                                betabound_best_ranked = beta_boundary_best_ranked,
-                                betabound_real = beta_boundary_real)
+                                betabound_best_ranked=beta_boundary_best_ranked,
+                                betabound_real=beta_boundary_real,
+                                ssnr=signal_to_signal_noise_ratio)
     create_meta_results(resultdir)
     print_meta_results(resultdir)
 
@@ -236,6 +241,7 @@ def create_meta_results(folder):
     highest_ranked_is_real = []
     elapsed_time = []
     prediction_error = []
+    ssnr = []
     i = 0
     while os.path.exists(folder + str(i) + "_data.npz"):
         datafile = np.load(folder + str(i) + "_data.npz")
@@ -251,6 +257,7 @@ def create_meta_results(folder):
         highest_ranked_is_real.append(datafile['highest_ranked_is_real'])
         elapsed_time.append(datafile['elapsed_time'])
         prediction_error.append(datafile['prediction_error'])
+        ssnr.append(datafile['ssnr'])
         i = i + 1
     np.savez_compressed(folder + "meta",
                         correct_support_selection=np.array(correct_support_selection),
@@ -259,7 +266,8 @@ def create_meta_results(folder):
                         highest_ranked_is_real=np.array(highest_ranked_is_real),
                         elapsed_time=elapsed_time,
                         n_supports_per_size=n_supports_per_size,
-                        prediction_error=prediction_error)
+                        prediction_error=prediction_error,
+                        ssnr=ssnr)
 
 def print_meta_results(folder):
     """ Method to print out the meta results to the terminal. The print-out
