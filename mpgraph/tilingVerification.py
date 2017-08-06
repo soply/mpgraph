@@ -15,9 +15,8 @@ from create_children.lasso_path_utils import calc_all_cand
 from mp_utils import calc_B_y_beta
 
 # Settings for plotting
-font = {'family' : 'normal',
-        'weight' : 'bold',
-        'size'   : 22}
+font = {'weight' : 'bold',
+        'size'   : 36}
 matplotlib.rc('font', **font)
 
 
@@ -123,9 +122,8 @@ def plot_tiling(tilingelement, n_disc=3):
             points[i][j, 0] = beta
             points[i][j, 1] = alpha[J]
             colors[i].append(colorlist[(idx + 2 * i) % 6])
-    plt.figure()
-    ax = plt.gca()
-    plt.title(r'Support tiling $u_{\beta, \alpha}$')
+    fig, ax = plt.subplots(figsize = (16,11))
+    ax.set_title(r'Support tiling $u_{\beta, \alpha}$')
     for i in range(max_layer):
         for j in range(len(points[i]) - 1):
             plt.semilogx(points[i][j:j + 2, 0], points[i][j:j + 2, 1],
@@ -152,9 +150,11 @@ def plot_tiling(tilingelement, n_disc=3):
                 #                     points[i][j:j + 2, 1],
                 #                     facecolor=colors[i][j + 1],
                 #                     alpha=0.5, linewidth=0.0)
+    plt.xlim(np.min(points[-1][:,0]), np.max(points[1][:,0]))
     plt.ylim(np.min(points[-1][:,1]), np.max(points[1][:,1]))
-    plt.xlabel(r'$\beta$')
-    plt.ylabel(r'$\alpha$')
+    ax.set_xticks([1, 10], [str(1), str(10)])
+    ax.set_xlabel(r'$\beta$')
+    ax.set_ylabel(r'$\alpha$')
     plt.show()
 
 def plot_tiling_graph(tilingelement, y_mode='layered'):
