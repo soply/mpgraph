@@ -18,6 +18,7 @@ from support_selection.layer_based import \
     largest_support_occuring_in_each_layer
 from support_selection.snr_based import highest_support_constrained_snr
 from tiling import wrapper_create_tiling
+from mp_utils import approximate_solve_mp_fixed_support
 
 __available_problem_types__ = ['unmixing', 'pertubation']
 
@@ -159,6 +160,28 @@ def run_numerous_one_constellation(problem, results_prefix = None):
             # Flag signalising whether correct support is connected to the highest
             # ranked tiling element
             highest_ranked_is_real = (ranking[-1, 6] == 0)
+            # Compute a prediction error
+            u_I, v_I = approximate_solve_mp_fixed_support(
+                                            best_tilingelement.support, A, y)
+            prediction_error = np.linalg.norm(
+                                    A[:,best_tilingelement.support].dot(
+                                        u_I[best_tilingelement.support])-
+                                    A[:, target_support].dot(
+                                        u_real[target_support])) ** 2/ \
+                                    (np.linalg.norm(A[:,target_support].dot(
+                                        u_real[target_support])) ** 2)
+            # Beta boundaries for highest_ranked tile and real_tile (if
+            # attainable by multi-penalty regularization)
+            beta_boundary_best_ranked = (best_tilingelement.beta_min,
+                                         best_tilingelement.beta_max)
+            if tiling_contains_real:
+                beta_boundary_real = []
+                for te_id in ranking[np.where(ranking[:, 6] == 0)[0],0]:
+                    real_tile = tiling.get_tiling_element(te_id)
+                    beta_boundary_real.append((real_tile.beta_min,
+                                               real_tile.beta_max))
+            else:
+                beta_boundary_real = [(-1.0, -1.0)]
             np.savez_compressed(resultdir + str(i) + "_data.npz",
                                 tabularised_results=tab,
                                 elapsed_time=elapsed_time,
@@ -166,7 +189,10 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 support=best_tilingelement.support,
                                 tiling_contains_real=tiling_contains_real,
                                 highest_ranked_is_real=highest_ranked_is_real,
-                                n_supports_per_size=n_supports_per_size)
+                                n_supports_per_size=n_supports_per_size,
+                                prediction_error=prediction_error,
+                                betabound_best_ranked = beta_boundary_best_ranked,
+                                betabound_real = beta_boundary_real)
     create_meta_results(resultdir)
     print_meta_results(resultdir)
 
@@ -209,6 +235,7 @@ def create_meta_results(folder):
     tiling_contains_real = []
     highest_ranked_is_real = []
     elapsed_time = []
+    prediction_error = []
     i = 0
     while os.path.exists(folder + str(i) + "_data.npz"):
         datafile = np.load(folder + str(i) + "_data.npz")
@@ -223,6 +250,7 @@ def create_meta_results(folder):
         tiling_contains_real.append(datafile['tiling_contains_real'])
         highest_ranked_is_real.append(datafile['highest_ranked_is_real'])
         elapsed_time.append(datafile['elapsed_time'])
+        prediction_error.append(datafile['prediction_error'])
         i = i + 1
     np.savez_compressed(folder + "meta",
                         correct_support_selection=np.array(correct_support_selection),
@@ -230,7 +258,8 @@ def create_meta_results(folder):
                         tiling_contains_real=np.array(tiling_contains_real),
                         highest_ranked_is_real=np.array(highest_ranked_is_real),
                         elapsed_time=elapsed_time,
-                        n_supports_per_size=n_supports_per_size)
+                        n_supports_per_size=n_supports_per_size,
+                        prediction_error=prediction_error)
 
 def print_meta_results(folder):
     """ Method to print out the meta results to the terminal. The print-out
