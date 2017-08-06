@@ -190,6 +190,7 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 tabularised_results=tab,
                                 elapsed_time=elapsed_time,
                                 symmetric_difference=ranking[-1, 6],
+                                symmetric_difference_best=np.min(tab[:, 6]),
                                 support=best_tilingelement.support,
                                 tiling_contains_real=tiling_contains_real,
                                 highest_ranked_is_real=highest_ranked_is_real,
@@ -237,6 +238,7 @@ def create_meta_results(folder):
     """
     correct_support_selection = []
     symmetric_difference = []
+    symmetric_difference_best = []
     tiling_contains_real = []
     highest_ranked_is_real = []
     elapsed_time = []
@@ -253,6 +255,7 @@ def create_meta_results(folder):
                                             n_supports_per_size_iter))
         correct_support_selection.append((datafile['symmetric_difference'] == 0))
         symmetric_difference.append(datafile['symmetric_difference'])
+        symmetric_difference_best.append(datafile['symmetric_difference_best'])
         tiling_contains_real.append(datafile['tiling_contains_real'])
         highest_ranked_is_real.append(datafile['highest_ranked_is_real'])
         elapsed_time.append(datafile['elapsed_time'])
@@ -262,6 +265,7 @@ def create_meta_results(folder):
     np.savez_compressed(folder + "meta",
                         correct_support_selection=np.array(correct_support_selection),
                         symmetric_difference=np.array(symmetric_difference),
+                        symmetric_difference_best=symmetric_difference_best,
                         tiling_contains_real=np.array(tiling_contains_real),
                         highest_ranked_is_real=np.array(highest_ranked_is_real),
                         elapsed_time=elapsed_time,
