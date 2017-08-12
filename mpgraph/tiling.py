@@ -136,7 +136,13 @@ class Tiling(object):
         self.prior = prior
         self.options = options
         starttime_svd = timer()
-        U, S, UT = np.linalg.svd(A.dot(A.T))
+        try:
+            U, S, UT = np.linalg.svd(A.dot(A.T))
+        except np.linalg.linalg.LinAlgError as err:
+            # SVD Did not converge
+            U, Saux, V = np.linalg.svd(A)
+            S = np.zeros(U.shape[0])
+            S[:Saux.shape[0]] = Saux
         self.svdU = U  # Pre-calc since needed very often
         self.svdS = S  # Pre-calc since needed very often
         self.elapsed_time_svd = timer() - starttime_svd
