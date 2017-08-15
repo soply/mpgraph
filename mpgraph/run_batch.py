@@ -191,6 +191,8 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 elapsed_time=elapsed_time,
                                 symmetric_difference=ranking[-1, 6],
                                 symmetric_difference_best=np.min(tab[:, 6]),
+                                symmetric_difference_best_fixed_size=np.min(
+                                    tab[tab[:,5] == problem['sparsity_level'], 6]),
                                 support=best_tilingelement.support,
                                 tiling_contains_real=tiling_contains_real,
                                 highest_ranked_is_real=highest_ranked_is_real,
@@ -198,6 +200,38 @@ def run_numerous_one_constellation(problem, results_prefix = None):
                                 prediction_error=prediction_error,
                                 betabound_best_ranked=beta_boundary_best_ranked,
                                 betabound_real=beta_boundary_real,
+                                ssnr=signal_to_signal_noise_ratio)
+        else:
+            # FIXME: Only for repairing symmetric differences
+            datafile = np.load(resultdir + str(i) + "_data.npz")
+            tab=datafile['tabularised_results']
+            elapsed_time=datafile['elapsed_time']
+            symmetric_difference=datafile['symmetric_difference']
+            symmetric_difference_best=datafile['symmetric_difference_best']
+            support=datafile['support']
+            tiling_contains_real=datafile['tiling_contains_real']
+            highest_ranked_is_real=datafile['highest_ranked_is_real']
+            n_supports_per_size=datafile['n_supports_per_size']
+            prediction_error=datafile['prediction_error']
+            betabound_best_ranked=datafile['betabound_best_ranked']
+            betabound_real=datafile['betabound_real']
+            ssnr=datafile['ssnr']
+            symmetric_difference_best_fixed_size=np.min(tab[tab[:,5] == \
+                                                problem['sparsity_level'], 6])
+            np.savez_compressed(resultdir + str(i) + "_data.npz",
+                                tabularised_results=tab,
+                                elapsed_time=elapsed_time,
+                                symmetric_difference=symmetric_difference,
+                                symmetric_difference_best=np.min(tab[:, 6]),
+                                symmetric_difference_best_fixed_size=np.min(
+                                    tab[tab[:,5] == problem['sparsity_level'], 6]),
+                                support=support,
+                                tiling_contains_real=tiling_contains_real,
+                                highest_ranked_is_real=highest_ranked_is_real,
+                                n_supports_per_size=n_supports_per_size,
+                                prediction_error=prediction_error,
+                                betabound_best_ranked=betabound_best_ranked,
+                                betabound_real=betabound_real,
                                 ssnr=signal_to_signal_noise_ratio)
     create_meta_results(resultdir)
     print_meta_results(resultdir)
@@ -239,6 +273,7 @@ def create_meta_results(folder):
     correct_support_selection = []
     symmetric_difference = []
     symmetric_difference_best = []
+    symmetric_difference_best_fixed_size = []
     tiling_contains_real = []
     highest_ranked_is_real = []
     elapsed_time = []
@@ -256,6 +291,7 @@ def create_meta_results(folder):
         correct_support_selection.append((datafile['symmetric_difference'] == 0))
         symmetric_difference.append(datafile['symmetric_difference'])
         symmetric_difference_best.append(datafile['symmetric_difference_best'])
+        symmetric_difference_best_fixed_size.append(datafile['symmetric_difference_best_fixed_size'])
         tiling_contains_real.append(datafile['tiling_contains_real'])
         highest_ranked_is_real.append(datafile['highest_ranked_is_real'])
         elapsed_time.append(datafile['elapsed_time'])
@@ -266,6 +302,7 @@ def create_meta_results(folder):
                         correct_support_selection=np.array(correct_support_selection),
                         symmetric_difference=np.array(symmetric_difference),
                         symmetric_difference_best=symmetric_difference_best,
+                        symmetric_difference_best_fixed_size=symmetric_difference_best_fixed_size,
                         tiling_contains_real=np.array(tiling_contains_real),
                         highest_ranked_is_real=np.array(highest_ranked_is_real),
                         elapsed_time=elapsed_time,
