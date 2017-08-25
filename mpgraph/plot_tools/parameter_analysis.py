@@ -192,3 +192,109 @@ def parameter_vs_fixed_sparsity_level(basefolder, identifier, methods,
     if save_as is not None:
         fig.savefig(save_as)
     plt.show()
+
+def success_vs_beta_disc(basefolder, identifier, method,
+                         parameterised_by, parameters,
+                         title = None,
+                         xlabel = None, ylabel = None, save_as = None,
+                         leg_loc = 'lower right',
+                         yaxis_scaling = 'semilog',
+                         legend_entries = None):
+    """ Plots the success rate against a discrete grid of betas over a batch
+    of all experiments given in the specified folder. These plots can be used to
+    check how well a MP grid approach would work.
+
+    Parameters
+    -------------
+    basefolder : python string
+        Basefolder of files.
+
+    identifier : python string
+        Identifier inside basefolder.
+
+    methods : python string
+        Python string denoting the used method (i.e. mp_LARS or mp_LASSO).
+
+    parameterised_by : python string
+        Success curves are parameterised by a certain parameter,
+        e.g. the sparsity level.
+
+    parameters : python list
+        Contains the parameters for which to plot the curves.
+
+    title, optional : python string
+        Optinal title of the plot.
+
+    xlabel, optional : python string
+        Optional xlabel of the plot.
+
+    ylabel, optional : python string
+        Optinal ylabel of the plot.
+
+    save_as, optional : python string
+        If given, saves the figure to the file provided under 'save_as'.
+
+    leg_loc, optional : python string
+        Location of legend, using matplotlib keywords.
+
+    legend_entries, optional : List of strings
+        List of strings of the same size as 2 * len(parameters), yielding legend
+        entries. If none, no legend is provided.
+
+    yaxis_scaling, optional : python string
+        Can be 'semilog' or 'normal'.
+    """
+
+    folder_name = basefolder + "/" + method + "_" + identifier + "/"
+    # Load problem data
+    with open(folder_name + 'log.txt') as data_file:
+        problem = json.load(data_file)
+    num_experiments = problem['num_tests']
+    sparsity_levels = problem['sparsity_level']
+    beta_disc = np.logspace(-6, 2, num=300)
+    success_curves = np.zeros((beta_disc.shape[0], len(parameters)))
+    fig = plt.figure(figsize = (16,9))
+    all_parameters = problem[parameterised_by]
+    for k, parameter in enumerate(parameters):
+        experiment_nr = all_parameters.index(parameter)
+        # Load file to experiment_nr.
+        meta_results = np.load(folder_name + str(experiment_nr) + "/meta.npz")
+        # Get successful experiments
+        tiling_contains_real = meta_results["tiling_contains_real"]
+        successful_experiments = np.where(tiling_contains_real)[0]
+        ratio_success = float(len(successful_experiments))/float(num_experiments)
+        ctr = 0
+        for j in successful_experiments:
+            datafile = np.load(folder_name + str(experiment_nr) + "/" + \
+                                                    str(j) + "_data.npz")
+            # Beta boundary according to solution space analysis
+            beta_boundary_real = datafile['betabound_real']
+            for i, beta in enumerate(beta_disc):
+                for (beta_min, beta_max) in beta_boundary_real:
+                    if beta_min <= beta and beta <= beta_max:
+                        success_curves[i,k] += 1.0
+                        break
+            ctr += 1
+        success_curves[:,k] = success_curves[:,k]/float(num_experiments)
+        # Plot number of successful experiments
+        plt.semilogx(beta_disc, ratio_success * np.ones(len(beta_disc)),
+                __color_rotation__[k % len(__color_rotation__)], linestyle = '--')
+        plt.semilogx(beta_disc, success_curves[:,k],
+                __color_rotation__[k % len(__color_rotation__)])
+    if legend_entries is not None:
+        plt.legend(legend_entries, loc = leg_loc, ncol = 2, fontsize = 20.0)
+    if xlabel is None:
+        plt.xlabel(r'$\beta$')
+    else:
+        plt.xlabel(xlabel)
+    if ylabel is None:
+        plt.ylabel(r'Success ratio')
+    else:
+        plt.ylabel(ylabel)
+    if title is None:
+        plt.title(r'Sensitivity wrt to $\beta$')
+    else:
+        plt.title(title)
+    if save_as is not None:
+        fig.savefig(save_as)
+    plt.show()
